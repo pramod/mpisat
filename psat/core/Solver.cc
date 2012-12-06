@@ -81,7 +81,7 @@ static DoubleOption  opt_garbage_frac      (_cat, "gc-frac",        "The fractio
 
 // new options!
 static BoolOption    opt_activity_tiebreak (_cat, "act-tie-break",  "Use the core-based tie breaker for activity factor", true);
-static IntOption     opt_max_share_size    (_cat, "max-share-size", "Maximum size of clauses that are shared.", 8);
+static IntOption     opt_max_share_size    (_cat, "max-share-size", "Maximum size of clauses that are shared.", 16);
 
 
 //=================================================================================================
@@ -984,6 +984,8 @@ void Solver::addLearntClause(vec<Lit>& clause)
         CRef cr = ca.alloc(clause, true);
         learnts.push(cr);
         attachClause(cr);
+        // should this be used?
+        claBumpActivity(ca[cr]);
     }
 }
 
