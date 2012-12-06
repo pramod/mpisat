@@ -42,7 +42,21 @@ const int bigPrimes [] = {
     1000859, 1000861, 1000889, 1000907, 1000919, 1000921, 1000931, 1000969,
     1000973, 1000981, 1000999, 1001003, 1001017, 1001023, 1001027, 1001041
 };
-const int numPrimes = sizeof(bigPrimes) / sizeof(bigPrimes[0]);
+const int smallPrimes[] = {
+    101, 103, 107, 109, 113, 127, 131, 137,
+    139, 149, 151, 157, 163, 167, 173, 179,
+    181, 191, 193, 197, 199, 211, 223, 227,
+    229, 233, 239, 241, 251, 257, 263, 269,
+    271, 277, 281, 283, 293, 307, 311, 313,
+    317, 331, 337, 347, 349, 353, 359, 367,
+    373, 379, 383, 389, 397, 401, 409, 419,
+    421, 431, 433, 439, 443, 449, 457, 461,
+    463, 467, 479, 487, 491, 499, 503, 509,
+    521, 523, 541, 547, 557, 563, 569, 571
+};
+
+const int numBigPrimes = sizeof(bigPrimes) / sizeof(bigPrimes[0]);
+const int numSmallPrimes = sizeof(smallPrimes) / sizeof(smallPrimes[0]);
 
 using namespace Minisat;
 
@@ -77,7 +91,7 @@ Solver::Solver() :
   , var_decay        (opt_var_decay)
   , clause_decay     (opt_clause_decay)
   , random_var_freq  (opt_random_var_freq)
-  , random_seed      (bigPrimes[(taskId*257) % numPrimes])
+  , random_seed      (bigPrimes[(taskId*257) % numBigPrimes] * smallPrimes[(taskId*97) % numSmallPrimes])
   , luby_restart     (opt_luby_restart)
   , ccmin_mode       (opt_ccmin_mode)
   , phase_saving     (opt_phase_saving)
