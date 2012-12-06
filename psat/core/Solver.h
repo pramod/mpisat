@@ -171,17 +171,26 @@ protected:
 
     struct VarOrderLt {
         const vec<double>&  activity;
+        const bool tieBreak;
         bool operator () (Var x, Var y) const { 
-            // Change here to bias individual solvers based on variable numbers.
-            if(activity[x] > activity[y]) return true;
-            else if(activity[x] < activity[y]) return false;
-            else {
-                int tieBreakX = (x%numTasks) == taskId;
-                int tieBreakY = (y%numTasks) == taskId;
-                return tieBreakX > tieBreakY;
+            if(tieBreak) {
+                // Change here to bias individual solvers based on variable numbers.
+                if(activity[x] > activity[y]) return true;
+                else if(activity[x] < activity[y]) return false;
+                else {
+                    int tieBreakX = (x%numTasks) == taskId;
+                    int tieBreakY = (y%numTasks) == taskId;
+                    return tieBreakX > tieBreakY;
+                }
+            } else {
+                return activity[x] > activity[y];
             }
         }
-        VarOrderLt(const vec<double>&  act) : activity(act) { }
+        VarOrderLt(const vec<double>&  act, bool tb) 
+            : activity(act) 
+            , tieBreak(tb)
+        { 
+        }
     };
 
     // Solver state:
