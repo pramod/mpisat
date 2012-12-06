@@ -78,7 +78,10 @@ static BoolOption    opt_luby_restart      (_cat, "luby",           "Use the Lub
 static IntOption     opt_restart_first     (_cat, "rfirst",         "The base restart interval", 100, IntRange(1, INT32_MAX));
 static DoubleOption  opt_restart_inc       (_cat, "rinc",           "Restart interval increase factor", 2, DoubleRange(1, false, HUGE_VAL, false));
 static DoubleOption  opt_garbage_frac      (_cat, "gc-frac",        "The fraction of wasted memory allowed before a garbage collection is triggered",  0.20, DoubleRange(0, false, HUGE_VAL, false));
+
+// new options!
 static BoolOption    opt_activity_tiebreak (_cat, "act-tie-break",  "Use the core-based tie breaker for activity factor", true);
+static IntOption     opt_max_share_size    (_cat, "max-share-size", "Maximum size of clauses that are shared.", 8);
 
 
 //=================================================================================================
@@ -1004,7 +1007,7 @@ bool Solver::shouldExit()
 void Solver::exportClause(vec<Lit>& clause)
 {
     int sz = clause.size();
-    if(sz > MAX_SHARING_CLAUSE_SIZE) { return; }
+    if(sz > opt_max_share_size) { return; }
 
     // pipe this to all the other processes.
     Lit* ptr = clause.dataPtr();
@@ -1035,7 +1038,7 @@ bool Solver::importClause(int sz, vec<Lit>& clause)
 void Solver::importAllClauses()
 {
     vec<Lit> clause;
-    for(int sz = 1; sz <= MAX_SHARING_CLAUSE_SIZE; sz++) {
+    for(int sz = 1; sz <= opt_max_share_size; sz++) {
         bool more = false;
         do {
             more = importClause(sz, clause);

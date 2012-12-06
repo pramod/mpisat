@@ -33,7 +33,6 @@ extern int taskKilled;
 
 // CONSTANTS
 #define MPI_TAG_DONE 513            // some random number that doesn't interfere with other tags.
-#define MAX_SHARING_CLAUSE_SIZE 16  // let's start with this number.
 #define MPI_CLAUSE_TAG(i) (16+i)    // the tag for clauses of size i.
 
 
