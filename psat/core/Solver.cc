@@ -19,9 +19,30 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 **************************************************************************************************/
 
 #include <math.h>
+#include <mpi.h>
 
 #include "mtl/Sort.h"
 #include "core/Solver.h"
+
+//=================================================================================================
+// Globals:
+int numTasks;
+int taskId;
+int taskKilled = 0;
+
+const int bigPrimes [] = {
+    1000003, 1000033, 1000037, 1000039, 1000081, 1000099, 1000117, 1000121,
+    1000133, 1000151, 1000159, 1000171, 1000183, 1000187, 1000193, 1000199,
+    1000211, 1000213, 1000231, 1000249, 1000253, 1000273, 1000289, 1000291,
+    1000303, 1000313, 1000333, 1000357, 1000367, 1000381, 1000393, 1000397,
+    1000403, 1000409, 1000423, 1000427, 1000429, 1000453, 1000457, 1000507,
+    1000537, 1000541, 1000547, 1000577, 1000579, 1000589, 1000609, 1000619,
+    1000621, 1000639, 1000651, 1000667, 1000669, 1000679, 1000691, 1000697,
+    1000721, 1000723, 1000763, 1000777, 1000793, 1000829, 1000847, 1000849,
+    1000859, 1000861, 1000889, 1000907, 1000919, 1000921, 1000931, 1000969,
+    1000973, 1000981, 1000999, 1001003, 1001017, 1001023, 1001027, 1001041
+};
+const int numPrimes = sizeof(bigPrimes) / sizeof(bigPrimes[0]);
 
 using namespace Minisat;
 
@@ -56,7 +77,7 @@ Solver::Solver() :
   , var_decay        (opt_var_decay)
   , clause_decay     (opt_clause_decay)
   , random_var_freq  (opt_random_var_freq)
-  , random_seed      (opt_random_seed)
+  , random_seed      (bigPrimes[(taskId*257) % numPrimes])
   , luby_restart     (opt_luby_restart)
   , ccmin_mode       (opt_ccmin_mode)
   , phase_saving     (opt_phase_saving)
@@ -96,7 +117,8 @@ Solver::Solver() :
   , conflict_budget    (-1)
   , propagation_budget (-1)
   , asynch_interrupt   (false)
-{}
+{
+}
 
 
 Solver::~Solver()
@@ -620,6 +642,18 @@ lbool Solver::search(int nof_conflicts)
     starts++;
 
     for (;;){
+        int pending = 0;
+        MPI_Status status;
+        MPI_Iprobe(MPI_ANY_SOURCE, MPI_TAG_DONE, MPI_COMM_WORLD, &pending, &status);
+        if(pending == 1) {
+            int done;
+            MPI_Recv(&done, 1, MPI_INT, MPI_ANY_SOURCE, MPI_TAG_DONE, MPI_COMM_WORLD, &status);
+            assert(done == 1);
+            printf("taskID:%d GOT DONE MESSAGE!\n", taskId);
+            taskKilled = 1;
+            return l_Undef;
+        }
+
         CRef confl = propagate();
         if (confl != CRef_Undef){
             // CONFLICT
@@ -649,7 +683,8 @@ lbool Solver::search(int nof_conflicts)
                 max_learnts             *= learntsize_inc;
 
                 if (verbosity >= 1)
-                    printf("| %9d | %7d %8d %8d | %8d %8d %6.0f | %6.3f %% |\n", 
+                    printf("| %6d | %9d | %7d %8d %8d | %8d %8d %6.0f | %6.3f %% |\n", 
+                           taskId,
                            (int)conflicts, 
                            (int)dec_vars - (trail_lim.size() == 0 ? trail.size() : trail_lim[0]), nClauses(), (int)clauses_literals, 
                            (int)max_learnts, nLearnts(), (double)learnts_literals/nLearnts(), progressEstimate()*100);
@@ -761,11 +796,11 @@ lbool Solver::solve_()
     learntsize_adjust_cnt     = (int)learntsize_adjust_confl;
     lbool   status            = l_Undef;
 
-    if (verbosity >= 1){
-        printf("============================[ Search Statistics ]==============================\n");
-        printf("| Conflicts |          ORIGINAL         |          LEARNT          | Progress |\n");
-        printf("|           |    Vars  Clauses Literals |    Limit  Clauses Lit/Cl |          |\n");
-        printf("===============================================================================\n");
+    if (verbosity >= 1 && taskId == 0){
+        printf("|============================[ Search Statistics ]======================================|\n");
+        printf("| TaskID | Conflicts |          ORIGINAL         |          LEARNT          | Progress  |\n");
+        printf("|        |           |    Vars  Clauses Literals |    Limit  Clauses Lit/Cl |           |\n");
+        printf("|=======================================================================================|\n");
     }
 
     // Search:
@@ -773,6 +808,7 @@ lbool Solver::solve_()
     while (status == l_Undef){
         double rest_base = luby_restart ? luby(restart_inc, curr_restarts) : pow(restart_inc, curr_restarts);
         status = search(rest_base * restart_first);
+        if(taskKilled) return l_Undef;
         if (!withinBudget()) break;
         curr_restarts++;
     }

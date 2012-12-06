@@ -22,6 +22,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 
 #include <signal.h>
 #include <zlib.h>
+#include <mpi.h>
 
 #include "utils/System.h"
 #include "utils/ParseUtils.h"
@@ -38,6 +39,7 @@ void printStats(Solver& solver)
 {
     double cpu_time = cpuTime();
     double mem_used = memUsedPeak();
+    printf("taskId                : %d\n", taskId);
     printf("restarts              : %"PRIu64"\n", solver.starts);
     printf("conflicts             : %-12"PRIu64"   (%.0f /sec)\n", solver.conflicts   , solver.conflicts   /cpu_time);
     printf("decisions             : %-12"PRIu64"   (%4.2f %% random) (%.0f /sec)\n", solver.decisions, (float)solver.rnd_decisions*100 / (float)solver.decisions, solver.decisions   /cpu_time);
@@ -67,9 +69,12 @@ static void SIGINT_exit(int signum) {
 //=================================================================================================
 // Main:
 
-
 int main(int argc, char** argv)
 {
+    MPI_Init(&argc, &argv);
+    MPI_Comm_size(MPI_COMM_WORLD, &numTasks);
+    MPI_Comm_rank(MPI_COMM_WORLD,&taskId);
+
     try {
         setUsageHelp("USAGE: %s [options] <input-file> <result-output-file>\n\n  where input may be either in plain or gzipped DIMACS.\n");
         // printf("This is MiniSat 2.0 beta\n");
@@ -119,14 +124,16 @@ int main(int argc, char** argv)
                     printf("WARNING! Could not set resource limit: Virtual memory.\n");
             } }
         
-        if (argc == 1)
-            printf("Reading from standard input... Use '--help' for help.\n");
+        if (argc == 1) {
+            printf("Syntax error. Please provide an input file for the parallel solver.\n");
+            exit(1);
+        }
         
         gzFile in = (argc == 1) ? gzdopen(0, "rb") : gzopen(argv[1], "rb");
         if (in == NULL)
             printf("ERROR! Could not open file: %s\n", argc == 1 ? "<stdin>" : argv[1]), exit(1);
         
-        if (S.verbosity > 0){
+        if (S.verbosity > 0 && taskId == 0){
             printf("============================[ Problem Statistics ]=============================\n");
             printf("|                                                                             |\n"); }
         
@@ -134,12 +141,12 @@ int main(int argc, char** argv)
         gzclose(in);
         FILE* res = (argc >= 3) ? fopen(argv[2], "wb") : NULL;
         
-        if (S.verbosity > 0){
+        if (S.verbosity > 0 && taskId == 0){
             printf("|  Number of variables:  %12d                                         |\n", S.nVars());
             printf("|  Number of clauses:    %12d                                         |\n", S.nClauses()); }
         
         double parsed_time = cpuTime();
-        if (S.verbosity > 0){
+        if (S.verbosity > 0 && taskId == 0){
             printf("|  Parse time:           %12.2f s                                       |\n", parsed_time - initial_time);
             printf("|                                                                             |\n"); }
  
@@ -150,7 +157,7 @@ int main(int argc, char** argv)
        
         if (!S.simplify()){
             if (res != NULL) fprintf(res, "UNSAT\n"), fclose(res);
-            if (S.verbosity > 0){
+            if (S.verbosity > 0 && taskId == 0){
                 printf("===============================================================================\n");
                 printf("Solved by unit propagation\n");
                 printStats(S);
@@ -161,6 +168,18 @@ int main(int argc, char** argv)
         
         vec<Lit> dummy;
         lbool ret = S.solveLimited(dummy);
+
+        if(!taskKilled) {
+            for(int i = 0; i != numTasks; i++) {
+                int done = 1;
+                if(i != taskId) {
+                    MPI_Send(&done, 1, MPI_INT, i, MPI_TAG_DONE, MPI_COMM_WORLD);
+                }
+            }
+        } else {
+            goto done;
+        }
+
         if (S.verbosity > 0){
             printStats(S);
             printf("\n"); }
@@ -178,7 +197,8 @@ int main(int argc, char** argv)
                 fprintf(res, "INDET\n");
             fclose(res);
         }
-        
+        done:
+        MPI_Finalize();
 #ifdef NDEBUG
         exit(ret == l_True ? 10 : ret == l_False ? 20 : 0);     // (faster than "return", which will invoke the destructor for 'Solver')
 #else

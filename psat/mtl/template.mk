@@ -18,7 +18,7 @@ DCOBJS     = $(addsuffix d,  $(COBJS))
 RCOBJS     = $(addsuffix r,  $(COBJS))
 
 
-CXX       ?= g++
+CXX       := mpic++
 CFLAGS    ?= -Wall -Wno-parentheses
 LFLAGS    ?= -Wall
 

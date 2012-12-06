@@ -27,6 +27,13 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include "utils/Options.h"
 #include "core/SolverTypes.h"
 
+extern int numTasks;
+extern int taskId;
+extern int taskKilled;
+
+// CONSTANTS
+#define MPI_TAG_DONE 580 // some random number.
+
 
 namespace Minisat {
 
@@ -162,7 +169,16 @@ protected:
 
     struct VarOrderLt {
         const vec<double>&  activity;
-        bool operator () (Var x, Var y) const { return activity[x] > activity[y]; }
+        bool operator () (Var x, Var y) const { 
+            // Change here to bias individual solvers based on variable numbers.
+            if(activity[x] > activity[y]) return true;
+            else if(activity[x] < activity[y]) return false;
+            else {
+                int tieBreakX = (x%numTasks) == taskId;
+                int tieBreakY = (y%numTasks) == taskId;
+                return tieBreakX > tieBreakY;
+            }
+        }
         VarOrderLt(const vec<double>&  act) : activity(act) { }
     };
 
