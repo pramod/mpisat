@@ -134,21 +134,21 @@ int main(int argc, char** argv)
             printf("ERROR! Could not open file: %s\n", argc == 1 ? "<stdin>" : argv[1]), exit(1);
         
         if (S.verbosity > 0 && taskId == 0){
-            printf("============================[ Problem Statistics ]=============================\n");
-            printf("|                                                                             |\n"); }
+            printf("============================[ Problem Statistics ]======================================\n");
+            printf("|                                                                                      |\n"); }
         
         parse_DIMACS(in, S);
         gzclose(in);
         FILE* res = (argc >= 3) ? fopen(argv[2], "wb") : NULL;
         
         if (S.verbosity > 0 && taskId == 0){
-            printf("|  Number of variables:  %12d                                         |\n", S.nVars());
-            printf("|  Number of clauses:    %12d                                         |\n", S.nClauses()); }
+            printf("|  Number of variables:  %12d                                                  |\n", S.nVars());
+            printf("|  Number of clauses:    %12d                                                  |\n", S.nClauses()); }
         
         double parsed_time = cpuTime();
         if (S.verbosity > 0 && taskId == 0){
-            printf("|  Parse time:           %12.2f s                                       |\n", parsed_time - initial_time);
-            printf("|                                                                             |\n"); }
+            printf("|  Parse time:           %12.2f s                                                |\n", parsed_time - initial_time);
+            printf("|                                                                                      |\n"); }
  
         // Change to signal-handlers that will only notify the solver and allow it to terminate
         // voluntarily:

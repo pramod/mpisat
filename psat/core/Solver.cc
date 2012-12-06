@@ -656,17 +656,8 @@ lbool Solver::search(int nof_conflicts)
     starts++;
 
     for (;;){
-        int pending = 0;
-        MPI_Status status;
-        MPI_Iprobe(MPI_ANY_SOURCE, MPI_TAG_DONE, MPI_COMM_WORLD, &pending, &status);
-        if(pending == 1) {
-            int done;
-            MPI_Recv(&done, 1, MPI_INT, MPI_ANY_SOURCE, MPI_TAG_DONE, MPI_COMM_WORLD, &status);
-            assert(done == 1);
-            printf("taskID:%d GOT DONE MESSAGE!\n", taskId);
-            taskKilled = 1;
-            return l_Undef;
-        }
+        if(shouldExit()) { return l_Undef; }
+        importAllClauses();
 
         CRef confl = propagate();
         if (confl != CRef_Undef){
@@ -687,6 +678,7 @@ lbool Solver::search(int nof_conflicts)
                 claBumpActivity(ca[cr]);
                 uncheckedEnqueue(learnt_clause[0], cr);
             }
+            exportClause(learnt_clause);
 
             varDecayActivity();
             claDecayActivity();
@@ -811,10 +803,10 @@ lbool Solver::solve_()
     lbool   status            = l_Undef;
 
     if (verbosity >= 1 && taskId == 0){
-        printf("|============================[ Search Statistics ]======================================|\n");
-        printf("| TaskID | Conflicts |          ORIGINAL         |          LEARNT          | Progress  |\n");
-        printf("|        |           |    Vars  Clauses Literals |    Limit  Clauses Lit/Cl |           |\n");
-        printf("|=======================================================================================|\n");
+        printf("|============================[ Search Statistics ]=====================================|\n");
+        printf("| TaskID | Conflicts |          ORIGINAL         |          LEARNT          | Progress |\n");
+        printf("|        |           |    Vars  Clauses Literals |    Limit  Clauses Lit/Cl |          |\n");
+        printf("|======================================================================================|\n");
     }
 
     // Search:
@@ -970,4 +962,79 @@ void Solver::garbageCollect()
         printf("|  Garbage collection:   %12d bytes => %12d bytes             |\n", 
                ca.size()*ClauseAllocator::Unit_Size, to.size()*ClauseAllocator::Unit_Size);
     to.moveTo(ca);
+}
+
+void Solver::addLearntClause(vec<Lit>& clause)
+{
+    if (clause.size() == 1){
+        if(value(clause[0]) == l_False) {
+            int btlevel = level(var(clause[0]));
+            cancelUntil(btlevel);
+            uncheckedEnqueue(clause[0]);
+        }
+    }else{
+        CRef cr = ca.alloc(clause, true);
+        learnts.push(cr);
+        attachClause(cr);
+    }
+}
+
+bool Solver::shouldExit()
+{
+    int pending = 0;
+    MPI_Status status;
+    MPI_Iprobe(MPI_ANY_SOURCE, MPI_TAG_DONE, MPI_COMM_WORLD, &pending, &status);
+    if(pending == 1) {
+        int done;
+        MPI_Recv(&done, 1, MPI_INT, MPI_ANY_SOURCE, MPI_TAG_DONE, MPI_COMM_WORLD, &status);
+        assert(done == 1);
+        printf("taskID:%d GOT DONE MESSAGE!\n", taskId);
+        taskKilled = 1;
+        return true;
+    } else {
+        return false;
+    }
+}
+
+void Solver::exportClause(vec<Lit>& clause)
+{
+    int sz = clause.size();
+    if(sz > MAX_SHARING_CLAUSE_SIZE) { return; }
+
+    // pipe this to all the other processes.
+    Lit* ptr = clause.dataPtr();
+    int bytes = sizeof(Lit) * sz;
+    for(int i = 0; i != numTasks; i++) {
+        if(i == taskId) continue;
+        MPI_Send(ptr, bytes, MPI_BYTE, i, MPI_CLAUSE_TAG(sz), MPI_COMM_WORLD);
+    }
+}
+
+bool Solver::importClause(int sz, vec<Lit>& clause)
+{
+    int pending=0;
+    MPI_Status status;
+    for(int i = 0; i != numTasks; i++) {
+        if(i == taskId) continue;
+        MPI_Iprobe(MPI_ANY_SOURCE, MPI_CLAUSE_TAG(sz), MPI_COMM_WORLD, &pending, &status);
+        if(pending) {
+            clause.growTo(sz);
+            int bytes = sizeof(Lit) * sz;
+            MPI_Recv(clause.dataPtr(), bytes, MPI_BYTE, MPI_ANY_SOURCE, MPI_CLAUSE_TAG(sz), MPI_COMM_WORLD, &status);
+            return true;
+        }
+    }
+    return false;
+}
+
+void Solver::importAllClauses()
+{
+    vec<Lit> clause;
+    for(int sz = 1; sz <= MAX_SHARING_CLAUSE_SIZE; sz++) {
+        bool more = false;
+        do {
+            more = importClause(sz, clause);
+            if(more) { addLearntClause(clause); }
+        } while(more);
+    }
 }

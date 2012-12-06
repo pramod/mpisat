@@ -68,6 +68,7 @@ public:
     void     growTo   (int size);
     void     growTo   (int size, const T& pad);
     void     clear    (bool dealloc = false);
+    T*       dataPtr  () const         { return data; }
 
     // Stack interface:
     void     push  (void)              { if (sz == cap) capacity(sz+1); new (&data[sz]) T(); sz++; }

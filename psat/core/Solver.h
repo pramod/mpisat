@@ -32,7 +32,9 @@ extern int taskId;
 extern int taskKilled;
 
 // CONSTANTS
-#define MPI_TAG_DONE 580 // some random number.
+#define MPI_TAG_DONE 513            // some random number that doesn't interfere with other tags.
+#define MAX_SHARING_CLAUSE_SIZE 16  // let's start with this number.
+#define MPI_CLAUSE_TAG(i) (16+i)    // the tag for clauses of size i.
 
 
 namespace Minisat {
@@ -252,6 +254,14 @@ protected:
     void     claDecayActivity ();                      // Decay all clauses with the specified factor. Implemented by increasing the 'bump' value instead.
     void     claBumpActivity  (Clause& c);             // Increase a clause with the current 'bump' value.
 
+    // Sharing.
+    void     addLearntClause  (vec<Lit>& clause);               // Add this clause to the list of learnt clauses.
+    bool     shouldExit       ();                               // Are we done?
+    void     exportClause     (vec<Lit>& clause);               // Send this out.
+    bool     importClause     (int sz, vec<Lit>& clause);       // Get a new clause.
+    void     importAllClauses ();                               // Get all new clauses.
+
+
     // Operations on clauses:
     //
     void     attachClause     (CRef cr);               // Attach a clause to watcher lists.
@@ -378,6 +388,7 @@ inline void     Solver::toDimacs     (const char* file, Lit p){ vec<Lit> as; as.
 inline void     Solver::toDimacs     (const char* file, Lit p, Lit q){ vec<Lit> as; as.push(p); as.push(q); toDimacs(file, as); }
 inline void     Solver::toDimacs     (const char* file, Lit p, Lit q, Lit r){ vec<Lit> as; as.push(p); as.push(q); as.push(r); toDimacs(file, as); }
 
+//=================================================================================================
 
 //=================================================================================================
 // Debug etc:
