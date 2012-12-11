@@ -1,4 +1,5 @@
 import sys
+import itertools
 
 SAT         = 0
 UNSAT       = 1
@@ -48,10 +49,19 @@ def compare(filename, suffixes):
 
     speed_strings = ('%-40s' % filename) + (' '.join([('%6.1f' % s) for s in speedups]))
     print speed_strings
+    return times
+
+def add(t1, t2):
+    return [x+y for x,y in itertools.izip(t1, t2)]
 
 def compare_all(filelist, suffixes):
+    t = [0] * len(suffixes)
     for line in open(filelist, 'rt'):
         if line.strip():
-            compare(line.strip(), suffixes)
+            ti = compare(line.strip(), suffixes)
+            t = add(t, ti)
+
+    n = [ni / t[0] for ni in t[1:]]
+    print (' '*40) + (' '.join([('%6.1f' % ti) for ti in n]))
 
 compare_all(sys.argv[1], sys.argv[2:])
