@@ -10,6 +10,7 @@
 \usepackage{paralist}
 \usepackage{tikz}
 \usepackage{fancyhdr}
+\usepackage{multirow}
 \usetikzlibrary{snakes}
 \usetikzlibrary{patterns}
 \usetikzlibrary{circuits}
@@ -43,5 +44,73 @@
 \subsection{Clause Sharing}
 \subsection{Decision Heuristic}
 \section{Results}
+
+The section describes our preliminary results with the simple clause sharing technique described earlier.
+
+\subsection{Methodology}
+Our benchmark problems are taken from SAT-Race 2008~\cite{SATRace2008}. We
+executed all 100 problems used in the competition using the sequential SAT
+solver Minisat 2.2 with a time limit of 5 minutes.\footnote{Minisat 2.1 was the
+fastest solver in SAT-Race 2008} Among these 100 problems, we chose to
+experiment with a subset of 25 problems that took Minisat 2.2 between 40s and
+200s to execute. Our intention in choosing this subset was to choose a small
+number of problems that we could execute relatively quickly and often while
+simultaneously ensuring that we avoid those that finished in a few seconds.  We
+intend to present full results in the standard SAT-Race format (time limit of
+15 minutes) for the final submission of this report.
+
+Experiments were performed on an 8-core Intel\textregistered
+~Xeon\textregistered ~E31230 CPU clocked at 3.20GHz with 32 GB of RAM. The
+comparison with ManySAT uses ManySAT version 2.0 obtained
+from~\cite{ManySATWeb}.  The default command-line and default parameter
+settings were used when executing ManySAT.
+
+
+\subsection{Speedup}
+\begin{table*}[htbp]
+    \begin{center}
+    \begin{tabular}{|l|c|c|c|c|c|c|c|c|}
+        \hline
+        {\textbf{SAT Benchmark}} & \multicolumn{4}{c|}{\bf ManySAT 2.0} & \multicolumn{4}{c|}{\bf MPI-Based Parallel Solver} \\
+        \hline
+        & $n=1$ & $n=2$ & $n=4$ & $n=8$ & $n=1$ & $n=2$ & $n=4$ & $n=8$ \\
+        \hline
+        ibm-2004-29-k25                          &    1.0 &    0.7 &    0.7 &    0.3 &    1.0 &    1.1 &    2.5 &    2.9 \\
+        ibm-2004-1\_11-k80                       &    1.0 &    0.3 &    0.2 &    0.1 &    1.0 &    0.7 &    0.8 &    1.1 \\
+        ibm-2002-20r-k75                         &    1.0 &    0.6 &    0.5 &    0.1 &    1.0 &    1.1 &    2.6 &    1.7 \\
+        simon-s02b-r4b1k1.2                      &    1.0 &    1.7 &    1.2 &    5.9 &    1.0 &   25.7 &   22.6 &    3.3 \\
+        velev-npe-1.0-9dlx-b71                   &    1.0 &    0.2 &    0.2 &    0.1 &    1.0 &    3.7 &    1.7 &    1.6 \\
+        schup-l2s-motst-2-k315                   &    1.0 &    0.4 &    0.3 &    0.2 &    1.0 &    0.5 &    1.1 &    0.8 \\
+        goldb-heqc-alu4mul                       &    1.0 &    1.0 &    0.7 &    0.3 &    1.0 &    1.9 &    3.3 &    3.0 \\
+        jarvi-eq-atree-9                         &    1.1 &    0.8 &    0.7 &    0.9 &    1.0 &    1.2 &    2.5 &    2.0 \\
+        ibm-2002-22r-k80                         &    1.0 &    0.3 &    0.6 &    0.1 &    1.0 &    0.5 &    1.0 &    1.8 \\
+        simon-s03-fifo8-400                      &    1.0 &    0.9 &    0.4 &    0.2 &    1.0 &    1.8 &    1.9 &    2.2 \\
+        ibm-2002-24r3-k100                       &    1.0 &    1.0 &    0.5 &    0.3 &    1.0 &    1.8 &    2.3 &    3.0 \\
+        mizh-sha0-36-4                           &    1.0 &    1.2 &    1.0 &    0.4 &    1.0 &    0.2 &    0.8 &    0.6 \\
+        manol-pipe-f7nidw                        &    1.0 &    0.9 &    0.6 &    0.2 &    1.0 &    1.6 &    2.3 &    2.4 \\
+        manol-pipe-c6bidw\_i                     &    1.0 &    0.6 &    0.4 &    0.2 &    1.0 &    1.5 &    1.6 &    2.0 \\
+        mizh-md5-47-3                            &    1.0 &    0.3 &    0.3 &    0.2 &    1.0 &    1.4 &    2.3 &    5.6 \\
+        ibm-2004-23-k80                          &    1.0 &    0.5 &    0.2 &    0.1 &    1.0 &    0.7 &    1.1 &    3.5 \\
+        mizh-md5-48-2                            &    1.0 &    0.1 &    0.1 &    0.1 &    1.0 &    1.4 &    2.2 &    5.9 \\
+        ibm-2002-22r-k75                         &    1.0 &    0.5 &    0.4 &    0.2 &    1.0 &    1.8 &    1.9 &    2.0 \\
+        manol-pipe-g10nid                        &    1.0 &    0.7 &    0.4 &    0.2 &    1.0 &    1.3 &    1.8 &    1.6 \\
+        fuhs-aprove-16                           &    1.0 &    0.4 &    0.3 &    0.2 &    1.0 &    1.0 &    1.7 &    1.7 \\
+        post-c32s-col400-16                      &    1.0 &    0.6 &    0.4 &    0.3 &    1.0 &    1.5 &    2.1 &    2.3 \\
+        anbul-dated-5-15-u                       &    1.0 &    0.9 &    0.6 &    0.3 &    1.0 &    2.0 &    2.0 &    1.7 \\
+        mizh-sha0-35-4                           &    1.0 &    1.7 &    0.6 &    0.4 &    1.0 &    5.9 &    1.6 &    9.0 \\
+        ibm-2004-29-k55                          &    1.0 &    7.1 &    5.0 &    1.9 &    1.0 &   21.5 &  164.3 &   59.2 \\
+        mizh-sha0-36-1                           &    1.0 &    0.3 &    0.3 &    0.5 &    1.0 &    0.6 &   11.2 &   14.6 \\
+        \hline
+    \end{tabular}
+    \end{center}
+    \caption{Speedup of parallel SAT solvers as $n$ (number of cores) is
+    varied. Speedup is computed using Minisat 2.2 as the baseline. }
+    \label{tab:speedup}
+\end{table*}
+Table \ref{tab:speedup} shows the speedup
+
 \section{Conclusion}
+
+\bibliographystyle{plain}
+\bibliography{report}
 \end{document}
