@@ -22,13 +22,13 @@
 \author{
     \IEEEauthorblockN{Nayden Nedev}
     \IEEEauthorblockA{
-        Department of Computer Science, \\
+        Department of Computer Science  \\
         Princeton University. \\
         \textit{nnedev@cs.princeton.edu}
     } 
     \and \IEEEauthorblockN{Pramod Subramanyan}
     \IEEEauthorblockA{
-        Department of Electrical Engineering, \\
+        Department of Electrical Engineering \\
         Princeton University. \\
         \textit{psubrama@princeton.edu}
     } 
@@ -41,8 +41,85 @@
 \section{Introduction}
 \section{Related Work}
 \section{Parallelization Strategy}
+Our general strategy for parallelization is twofold. To a limited extent we use
+divide and conquer strategy to ensure that the different processes are working
+on different parts of the search space. However, processes co-operate with each
+process by sharing learnt clauses with other processes. 
+
 \subsection{Clause Sharing}
-\subsection{Decision Heuristic}
+
+As the SAT solver explores the search space, it finds that certain regions of
+the space are unsatisfiable. This occurs each time the solver runs into a
+``conflict''. Modern solvers since GRASP~\cite{GRASP} \emph{analyze} each
+conflict to learn clauses that ensure that ``dead-ends'' are never visited
+again. In our solver, as in ManySAT~\cite{ManySAT}, clauses learnt by one
+process are broadcast to all the other processes. This benefits speedup by
+because clauses learned ensure that no other process visits that part 
+of the search space again.
+
+\subsubsection{What Clauses To Share}
+
+One important design decision here is deciding which clauses are to be shared
+with the other processes. As our results will show, sharing everything is not
+feasible because the communication overhead outweighs any performance benefits
+this may result in. Hammadi et al. \cite{Hammadi} suggest sharing clauses which
+contain no more than a certain number of literals. The intuition here is that
+short clauses are more ``general'', while long clause are more ``specific''.
+Hence, sharing short clauses is likely to be useful to processes regardless of
+what part of the search space they are in. In contrast, long clauses are likely
+to be useful to processes only if they are exploring the same part of the
+search space. 
+
+Note the SAT solver will most likely \textit{not} explore all parts of the
+search space as this would simply take too long. Modern solvers are efficient
+because they determine satisfiability by using heuristics to explore only
+those parts of the search space that are likely to lead to a solution.
+
+\subsubsection{Clause Sharing Based on Activity Factors}
+Modern solvers since Chaff~\cite{Chaff} maintain an ``activity factor'' for
+each variable that is measure of the number of conflicts a variable has
+recently been involved in. Variables with a high activity factor are chosen
+by the decision heuristic when determining which part of the search to explore
+next. 
+
+If two processes are exploring ``nearby'' parts of the search space, they will
+likely have the same set of variables with high activity factors. This suggests
+that activity factors may be a useful measure to determine which clauses ought
+to be shared with which variables. The challenge here is in communicating the
+activity factors from one process to another without the communication overhead
+negating any performance gains that may result from the clause sharing.
+
+One of the goals of our project is to gain an understanding of what clauses
+would be useful to share and design mechanisms for ``intelligent'' learned
+clause sharing.  Activity factors are likely to be a useful metric in designing
+such mechanisms.
+
+\subsection{Decision Heuristic} 
+
+The decision heuristic in a SAT solver determines which variable is to be
+assigned to and ``branch'' on next. Modern SAT solvers use the activity factor
+metric to determine which variable to branch on.
+
+Our parallel SAT solver has to balance the competing interests of dividing the
+search space among different processes while ensuring that they don't go too
+``far away'' from each other. If the processes are exploring completely
+independent parts of the search space, the learned clauses from one process
+will likely not be useful to other processes. 
+
+Our current decision heuristic balances these goals in the following way.  If
+two variables have exactly the same activity factor, the heuristic biases
+process $i$ towards variables $v_k$ such that $k~mod~i=0$. If two variables
+have differing activity factors, the ``default'' heuristic of preferring the
+higher activity variable is used.
+
+It is possible that if two variables similar but not equal activity factors, it
+might still be beneficial to bias certain threads towards certain variables. We
+intend to examine the impact of this type of decision heuristic in the final
+submission.
+
+\subsection{A Clustered Approach}
+
+
 \section{Results}
 
 The section describes our preliminary results with the simple clause sharing
@@ -80,7 +157,7 @@ settings were used when executing ManySAT.
     \begin{center}
     \begin{tabular}{|l|c|c|c|c|c|c|c|c|}
         \hline
-        {\textbf{SAT Benchmark}} & \multicolumn{4}{c|}{\bf ManySAT 2.0} & \multicolumn{4}{c|}{\bf MPI-Based Parallel Solver} \\
+        {\textbf{SAT Benchmark}} & \multicolumn{4}{c|}{\bf ManySAT 2.0} & \multicolumn{4}{c|}{\bf MPI-based Parallel Solver} \\
         \hline
         & $n=1$ & $n=2$ & $n=4$ & $n=8$ & $n=1$ & $n=2$ & $n=4$ & $n=8$ \\
         \hline
