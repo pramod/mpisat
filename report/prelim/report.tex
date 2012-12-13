@@ -146,6 +146,39 @@ off at 8 cores.
 \subsection{Effect of Clause Sharing}
 \label{sec:sharing effects}
 
+\begin{figure}[htbp]
+    \begin{center}
+        \includegraphics[width=\columnwidth]{images/mcs.pdf}
+        \caption{Effect of maximum shared clause size (MSCS).}
+        \label{fig:mscs}
+    \end{center}
+\end{figure}
+
+Figure \ref{fig:mscs} shows the effect of maximum size of shared clauses on the
+speedup. Note these results are slightly different from those shown in Figure
+\ref{fig:speedup} because of noise in the timing measurements. Although the
+trends are somewhat hard to interpret because of the noise, some observations
+that can be made are the following.
+
+\begin{enumerate}
+
+\item When executing with only 2 cores, sharing as many clauses as possible
+(i.e., up to maximum sharing clause size (MSCS) of 64) is beneficial.
+
+\item When executing with four cores, the best performance is achieved when
+MSCS=16. This number corresponds to the results shown in the previous
+subsection.
+
+\item When executing with either cores, sharing less (MSCS=8) seems to be the
+best although there is an abberant data point for MSCS=32.
+      
+\end{enumerate}
+
+
+\section*{Acknowledgements}
+
+We would like to thank Professor David Wentzlaff and Professor Sharad Malik for
+sharing their suggestions and ideas with us.
 
 \section{Conclusion}
 
