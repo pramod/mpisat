@@ -46,8 +46,8 @@ further improvement of the existing solutions arise. In this paper we present a
 parallel SAT solver algorithm based on conflict-driven clause sharing and
 message passing. We evaluate our approach on the base of the popular sequential
 MiniSAT solver and compare it with one of the most successful parallel solvers
-- ManySAT. Our experiments show that the proposed approach achieve up to 164
-times speedup on some instances when run on a modern multicore architecture.
+- ManySAT. Our experiments show that the proposed approach achieve up to 164X
+speedup. The average speedup when using four cores is about 2.0X.
 
 \end{abstract}
 
@@ -63,12 +63,13 @@ theoretical properties of the problem and its practical implications. It is the
 first problem in computer science that has been classifies as NP-complete
 \cite{SATNP}. One of the reasons, because of which it is so important, is the
 fact that many natural decision and optimizations problems in different areas
-of science can be modelled as an instance of SAT. This resulted in extensive
-research in this area and a lot of progress in finding efficient ways to solve
-SAT in a reasonable amount of time. A myriad of different algorithms has
-appeared in the scientific literature. Also, special competitions
-\cite{SATComp} has been organized to compare different ideas and
-implementations.
+of science and engineering can be modelled as an instance of SAT. This resulted
+in extensive research in this area and a lot of progress in finding efficient
+ways to solve SAT in a reasonable amount of time. Myriad
+algorithms~\cite{CHAFF, GRASP, MiniSat,PSATO,WalkSAT,DPLL,GRADSAT,ManySAT} have
+appeared in the scientific literature for this problem and special competitions
+\cite{SATRace2008} have been organized to compare different ideas and
+implementations.  \cite{GRASP}
 
 Most modern SAT solvers are entirely sequential and do not try to introduce any
 kind of parallel computation in their algorithms. The rise of new powerful
@@ -76,12 +77,14 @@ multiprocessor architectures brings new directions in which SAT solvers can be
 improved. In this paper, we propose a new parallel algorithm for solving the
 SAT problem based on message passing techniques.
 
-The rest of this paper is organized as follows: we make a review 
-of the related work in Section 2, describe our solution in more detail in 
-Section 3, present the preliminary results of it in Section 4 and 
-conclude in Section 5.
+The rest of this paper is organized as follows: we review related work in
+Section \ref{sec:related}, describe our solution in more detail in Section
+\ref{sec:strategy}, present the preliminary results of in Section
+\ref{sec:results} and conclude in Section \ref{sec:finish}.
 
 \section{Related Work}
+\label{sec:related}
+
 There are hundreds of different algorithms and their variations that have been
 proposed for this problem. Basically, there are two main classes of modern
 algorithms that are used to solve the SAT problem in practice: the
@@ -169,6 +172,8 @@ from variations of the traditional DPLL algorithm. Each sequential algorithm sha
 clauses, which leads to some additional improvement.
 
 \section{Parallelization Strategy}
+\label{sec:strategy}
+
 Our general strategy for parallelization is twofold. To a limited extent we use
 divide and conquer strategy to ensure that the different processes are working
 on different parts of the search space. However, processes co-operate with each
@@ -234,18 +239,88 @@ will likely not be useful to other processes.
 Our current decision heuristic balances these goals in the following way.  If
 two variables have exactly the same activity factor, the heuristic biases
 process $i$ towards variables $v_k$ such that $k~mod~i=0$. If two variables
-have differing activity factors, the ``default'' heuristic of preferring the
-higher activity variable is used.
+have differing activity factors, the variable with higher activity is chosen.
 
-It is possible that if two variables similar but not equal activity factors, it
-might still be beneficial to bias certain threads towards certain variables. We
-intend to examine the impact of this type of decision heuristic in the final
-submission.
+\subsection{A Clustered Sharing Approach}
 
-\subsection{A Clustered Approach}
+\begin{figure*}[htbp]
+    \tikzstyle{box}=[rectangle,draw=black,thick,inner sep=2pt,text centered,
+                     minimum height=8mm,minimum width=15mm]
+    \tikzstyle{bigbox}=[rectangle,draw=black,thick,inner sep=2pt,text centered,
+                        minimum height=8mm,minimum width=40mm, rounded corners=7]
+    \begin{center}
+    \begin{tikzpicture}
+        \node[box] (c0) at (0,0) {\small{core 0}};
+        \node[box] (c1) at (2,0) {\small{core 1}};
+        \node[box] (c2) at (4,0) {\small{core 2}};
+        \node[box] (c3) at (6,0) {\small{core 3}};
+        \node[bigbox] (ic0) at (3,1.5) {\small{broadcast interconnect}};
+        \draw[<->, thick] (c0.north) -- (ic0.210);
+        \draw[<->, thick] (c1.north) -- (ic0.240);
+        \draw[<->, thick] (c2.north) -- (ic0.300);
+        \draw[<->, thick] (c3.north) -- (ic0.330);
+    \end{tikzpicture}
+    \end{center}
+    \caption{Simple clause sharing broadcasts all learned clauses to every other process.}
+    \label{fig:simple}
+\end{figure*}
 
+Figure \ref{fig:simple} shows the ``simple'' sharing approach. This is similar
+to ManySAT and is the form of sharing implemented in the results shown. Each
+process shares all learned clauses less than a certain maximum length with
+every other process.
+
+A different approach to clause sharing is shown in Figure \ref{fig:cluster}.
+Here, the idea is that processes within the same cluster will share both long
+and short clauses with each other. However, processes in different clusters
+will only share short clauses with each other. The intuition here is that short
+clauses are more general and hence likely to be useful to all processes while
+the processes in a cluster are likely to be working on the same set of
+variables and hence it makes sense to share longer and more specific clauses
+with the rest of the cluster.
+
+The clustered is yet to be fully implemented and results are not shown for it
+in this preliminary report.
+\begin{figure*}[htbp]
+    \tikzstyle{box}=[rectangle,draw=black,thick,inner sep=2pt,text centered,
+                     minimum height=8mm,minimum width=15mm]
+    \tikzstyle{bigbox}=[rectangle,draw=black,thick,inner sep=2pt,text centered,
+                        minimum height=8mm,minimum width=40mm, rounded corners=7]
+    \begin{center}
+    \begin{tikzpicture}
+        \node[box] (c0) at (0,0) {\small{core 0}};
+        \node[box] (c1) at (2,0) {\small{core 1}};
+        \node[box] (c2) at (4,0) {\small{core 2}};
+        \node[box] (c3) at (6,0) {\small{core 3}};
+        \node[box] (c4) at (8,0) {\small{core 4}};
+        \node[box] (c5) at (10,0) {\small{core 5}};
+        \node[box] (c6) at (12,0) {\small{core 6}};
+        \node[box] (c7) at (14,0) {\small{core 7}};
+        \node[bigbox] (ic0) at (3,1.5) {\small{cluster interconnect}};
+        \node[bigbox] (ic1) at (11,1.5) {\small{cluster interconnect}};
+        \node[bigbox] (ic2) at (7,3.0) {\small{global interconnect}};
+
+        \draw[<->, thick] (c0.north) -- (ic0.210);
+        \draw[<->, thick] (c1.north) -- (ic0.240);
+        \draw[<->, thick] (c2.north) -- (ic0.300);
+        \draw[<->, thick] (c3.north) -- (ic0.330);
+        
+        \draw[<->, thick] (c4.north) -- (ic1.210);
+        \draw[<->, thick] (c5.north) -- (ic1.240);
+        \draw[<->, thick] (c6.north) -- (ic1.300);
+        \draw[<->, thick] (c7.north) -- (ic1.330);
+
+        \draw[<->, thick] (ic0.north) -- (ic2.240);
+        \draw[<->, thick] (ic1.north) -- (ic2.300);
+    \end{tikzpicture}
+    \end{center}
+    \caption{Clustered sharing shares long and short clauses with the local cluster 
+             while broadcasting only short clauses to all the other processes.}
+    \label{fig:cluster}
+ \end{figure*}
 
 \section{Results}
+\label{sec:results}
 
 The section describes our preliminary results with the simple clause sharing
 technique described earlier. The results shown in Section \ref{sec:speedup}
@@ -265,8 +340,8 @@ simultaneously ensuring that we avoid those that finished in a few seconds.  We
 intend to present full results in the standard SAT-Race format (time limit of
 15 minutes) for the final submission of this report.
 
-Fourteen among the chosen 25 problems were satisfiable while the remaining
-eleven were unsatisfiable.
+Fourteen among the chosen 25 problems are satisfiable while the remaining
+eleven are unsatisfiable.
 
 Experiments were performed on an 8-core Intel\textregistered
 ~Xeon\textregistered ~E31230 CPU clocked at 3.20GHz with 32 GB of RAM. The
@@ -383,6 +458,7 @@ We would like to thank Professor David Wentzlaff and Professor Sharad Malik for
 sharing their suggestions and ideas with us.
 
 \section{Conclusion}
+\label{sec:finish}
 
 \bibliographystyle{plain}
 \bibliography{report}
