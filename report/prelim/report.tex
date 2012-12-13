@@ -23,23 +23,103 @@
     \IEEEauthorblockN{Nayden Nedev}
     \IEEEauthorblockA{
         Department of Computer Science  \\
-        Princeton University. \\
+        Princeton University \\
         \textit{nnedev@cs.princeton.edu}
     } 
     \and \IEEEauthorblockN{Pramod Subramanyan}
     \IEEEauthorblockA{
         Department of Electrical Engineering \\
-        Princeton University. \\
+        Princeton University \\
         \textit{psubrama@princeton.edu}
     } 
 }
 \maketitle
 
 \begin{abstract}
+The Boolean Satisfiability Problem is a task with many practical applications 
+and is known to be NP-complete. Numerous different algorithms have been proposed
+in the literature that effectively solve real-world instances of the problem in
+a reasonable amount of time. \\ 
+\indent With the coming of fast modern multiprocessor
+systems, new direction for further improvement of the existing solutions 
+arise. In this paper we present a parallel SAT solver algorithm based on
+conflict-driven clause sharing and message passing. We evaluate our approach
+on the base of the popular sequential MiniSAT solver and compare it with one 
+of the most successful parallel solvers - ManySAT. Our experiments show that
+the proposed approach achieve up to 164 times speedup on some instances when
+run on a modern multicore architecture.
+
 \end{abstract}
 
 \section{Introduction}
+The Boolean Satisfiability Problem, usually called just the SAT problem, 
+is the task of finding an assignment of all variables of a boolean 
+formula such a way that the whole formula evaluates to a true value.
+
+\indent The SAT problem has been thoroughly investigated and understood
+during the last several decades. A lot of work has been done in both 
+investigating the theoretical properties of the problem and its practical implications. It is the first problem in computer science that 
+has been classifies as NP-complete \cite{SATNP}. One of the
+reasons, because of which it is so important, is the fact that many 
+natural decision and optimizations problems in different areas of science 
+can be modelled as an instance of SAT. This resulted in extensive research 
+in this area and a lot of progress in finding efficient ways to solve SAT in a reasonable amount of time. A myriad of different algorithms has appeared in the 
+scientific literature. Also, special competitions \cite{SATComp} has been 
+organized to compare different ideas and implementations.
+
+\indent Most of the modern SAT solvers are entirely sequential and does not
+try to introduce any kind of parallel computation in their algorithms. The 
+rise of new powerful multiprocessor architectures brings new directions in
+which SAT solvers can be improved. In this paper, we propose a new parallel 
+algorithm for solving the SAT problem based on message passing techniques.
+
+\indent The rest of this paper is organized as follows: we make a review 
+of the related work in Section 2, describe our solution in more detail in 
+Section 3, present the preliminary results of it in Section 4 and 
+conclude in Section 5.
+
 \section{Related Work}
+There are hundreds of different algorithms and their variations that 
+have been proposed for this problem. Basically, there are two main 
+classes of modern algorithms that are used to solve the SAT problem in practice:
+the conflict-driven clause learning algorithm and the stochastic 
+local search algorithms. In the last years, parallel modifications of 
+this approaches have been proposed.
+
+\subsection{Sequential Approaches}
+\subsubsection{Davis-Putnam-Logemann-Loveland (DPLL)}
+The DPLL algorithm is complete search algorithm based on back-tracking. The vanilla 
+version of DPLL applies a couple of heuristics before each recursive call which drastically reduce the search space: \\
+\indent $\bullet$ Unit Propagation - if a clause contains only one literal, it can be
+only satisfied by giving such a value to the this literal that make it true. \\
+\indent $\bullet$ Pure Literal Elimination - if a variable occurs with only one polarity in the whole formula, then it can be assigned with a value that corresponds to this polarity.
+
+\subsubsection{Conflict-Driven Clause Learning (CDCL)}
+Conflict-Driven Clause Learning has been initially proposed in
+GRASP \cite{GRASP}. 1
+
+\subsubsection{Stochastic Local Search Algorithm}
+Another popular approach is to apply local search in the space of possible assignments such, i.e. iteratively improving the current solution of the 
+problem with respect to some heuristic until all the constraints are satisfied. 
+The most successful SAT solvers based on this technique are WalkSAT \cite{WalkSAT}
+and GSAT \cite{GSAT}.
+
+\subsection{Parallel Approaches}
+In contrast to the sequential solvers, a relatively small number of 
+high-performance parallel approaches have been proposed.
+
+\indent The earliest attempt for a parallel solver is PSATO \cite{PSATO}. It tries
+to parallelize the sequential SATO (SAtisfiability Testing Optimized) solver
+\cite{SATO}. Both versions use trie to represent the boolean formula. The exploration
+of the search space is organized in master/slave model.
+
+\indent A couple of algorithms - GrADSAT \cite{GRADSAT} and \cite{Blochinger} - try to improve the successful sequential Chaff \cite{CHAFF}.
+
+\indent The most recent notable parallel algorithm is ManySAT \citep{ManySAT}.
+ManySAT uses a portfolio of complimentary sequential algorithms that are derived
+from variations of the traditional DPLL algorithm. Each sequential algorithm shares
+clauses, which leads to some additional improvement.
+
 \section{Parallelization Strategy}
 Our general strategy for parallelization is twofold. To a limited extent we use
 divide and conquer strategy to ensure that the different processes are working
