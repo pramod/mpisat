@@ -117,24 +117,32 @@ solver finds a part of search space that is unsatisfiable, it analyzes this
 ``conflict'' to learn a new clause. Keeping track of the \emph{learned clauses}
 helps the solver from exploring the same ``dead-ends'' over and over again.
 
-\subsubsection{Modern Solvers: Chaff and Minisat} 
-Chaff~\cite{CHAFF} improves upon GRASP using two techniques.
+\subsubsection{Modern Solvers: Chaff and MiniSat} 
+Chaff~\cite{CHAFF} improves upon GRASP using two techniques.  The first is a
+data structure that enables efficient traversal of the clause database which is
+required for unit propagation known as \textbf{Two-literal watching}.
+Two-literal watching maintains the invariant that two unassigned variables are
+watched in every clause. In other words, when a literal is assigned to, it is
+removed from the watchlist and replaced with an unwatched literal. When no
+unwatched literal can be found, it means the clause is eligible for unit
+propagation. The key advantage of two-literal watching is that it enables
+efficient unit propagation without requiring traversal of the entire clause
+database.
 
-\begin{itemize}
+The decision heuristic in a SAT solver determines which variable is to be
+assigned to (``branched'' on) next.  \textbf{Variable State Independent
+Decaying Sum (VSIDS)} was a decision heuristic instroduced by Chaff which tends
+to make the SAT solver explore variables that were recently involved in
+conflicts. VSIDS keeps track of an ``activity factor'' metric that is measure
+of the number of recent conflicts a variable has been involved in.  The
+intuition behind the metric is that it improves ``search space locality'' as
+variables recently involved in conflicts are more likely to be chosen by the
+decision heuristic.  This in turn improves overall performance by helping the
+solver ``close-out'' large regions of the search space.
 
-\item \textbf{Two-literal watching} is a data structuring technique that helps
-the solver efficiently perform unit propagation and literal elimination. 
-
-\item \textbf{Variable State Independent Decaying Sum (VSIDS)} was a decision
-heuristic instroduced by Chaff which tends to make the SAT solver explore
-variables that were recently involved in conflicts. The intuition behind the
-metric is that it improves ``search space locality'' as variables recently
-involved in conflicts are more likely to be chosen by the decision heuristic. 
-This in turn improves overall performance by helping the solver ``close-out''
-large regions of the search space.
-\end{itemize}
-
-Minisat 
+One of the main improvements that MiniSat~\cite{MiniSat} made on Chaff was
+to exploit input pre-processing. We use MiniSat version 2.2 as the
+baseline for our work.
 
 \subsubsection{Stochastic Local Search Algorithm}
 Another popular approach is to apply local search in the space of possible
@@ -197,18 +205,14 @@ those parts of the search space that are likely to lead to a solution.
 
 \subsubsection{Clause Sharing Based on Activity Factors}
 
-Modern solvers since Chaff~\cite{CHAFF} maintain an ``activity factor'' for
-each variable that is measure of the number of conflicts a variable has
-recently been involved in. Variables with a high activity factor are chosen
-by the decision heuristic when determining which part of the search to explore
-next. 
-
-If two processes are exploring ``nearby'' parts of the search space, they will
-likely have the same set of variables with high activity factors. This suggests
-that activity factors may be a useful measure to determine which clauses ought
-to be shared with which variables. The challenge here is in communicating the
-activity factors from one process to another without the communication overhead
-negating any performance gains that may result from the clause sharing.
+Modern solvers chose to explore parts of the search space determined by
+variables with a high activity factor.  If two processes are exploring
+``nearby'' parts of the search space, they will likely have the same set of
+variables with high activity factors. This suggests that activity factors may
+be a useful measure to determine which clauses ought to be shared with which
+variables. The challenge here is in communicating the activity factors from one
+process to another without the communication overhead negating any performance
+gains that may result from the clause sharing.
 
 One of the goals of our project is to gain an understanding of what clauses
 would be useful to share and design mechanisms for ``intelligent'' learned
@@ -252,9 +256,9 @@ and longer clauses.
 \subsection{Methodology}
 Our benchmark problems are taken from SAT-Race 2008~\cite{SATRace2008}. We
 executed all 100 problems used in the competition using the sequential SAT
-solver Minisat 2.2 with a time limit of 5 minutes.\footnote{Minisat 2.1 was the
+solver MiniSat 2.2 with a time limit of 5 minutes.\footnote{MiniSat 2.1 was the
 fastest solver in SAT-Race 2008} Among these 100 problems, we chose to
-experiment with a subset of 25 problems that took Minisat 2.2 between 40s and
+experiment with a subset of 25 problems that took MiniSat 2.2 between 40s and
 200s to execute. Our intention in choosing this subset was to choose a small
 number of problems that we could execute relatively quickly and often while
 simultaneously ensuring that we avoid those that finished in a few seconds.  We
@@ -311,7 +315,7 @@ settings were used when executing ManySAT.
     \end{tabular}
     \end{center}
     \caption{Speedup of parallel SAT solvers as $n$ (number of cores) is
-    varied. Speedup is computed using Minisat 2.2 as the baseline. }
+    varied. Speedup is computed using MiniSat 2.2 as the baseline. }
     \label{tab:speedup}
 \end{table*}
 Table \ref{tab:speedup} shows the speedup of the ManySAT 2.0 and our
@@ -335,7 +339,7 @@ cores outweighs the sharing benefit.
 
 Figure \ref{fig:speedup} presents the \emph{overall execution speedup} for the
 problems shown in Table \ref{tab:speedup}. The overall speedup measured here is
-speedup compared to Minisat 2.2 baseline for the time taken to solve all 25
+speedup compared to MiniSat 2.2 baseline for the time taken to solve all 25
 problems by the two parallel solvers. It can be seen that the MPI-based
 parallel solver gets only slightly faster when going from 1 to 2 cores. Going
 from 2 to 4 cores produces significant speedup but speedup is already tapering
