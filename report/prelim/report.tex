@@ -45,7 +45,11 @@
 \subsection{Decision Heuristic}
 \section{Results}
 
-The section describes our preliminary results with the simple clause sharing technique described earlier.
+The section describes our preliminary results with the simple clause sharing
+technique described earlier. The results shown in Section \ref{sec:speedup}
+share clauses with 16 literals or fewer with all the other cores. Section
+\ref{sec:sharing effects} investigates the impact of sharing shorter
+and longer clauses.
 
 \subsection{Methodology}
 Our benchmark problems are taken from SAT-Race 2008~\cite{SATRace2008}. We
@@ -59,6 +63,9 @@ simultaneously ensuring that we avoid those that finished in a few seconds.  We
 intend to present full results in the standard SAT-Race format (time limit of
 15 minutes) for the final submission of this report.
 
+Fourteen among the chosen 25 problems were satisfiable while the remaining
+eleven were unsatisfiable.
+
 Experiments were performed on an 8-core Intel\textregistered
 ~Xeon\textregistered ~E31230 CPU clocked at 3.20GHz with 32 GB of RAM. The
 comparison with ManySAT uses ManySAT version 2.0 obtained
@@ -67,6 +74,8 @@ settings were used when executing ManySAT.
 
 
 \subsection{Speedup}
+\label{sec:speedup}
+
 \begin{table*}[htbp]
     \begin{center}
     \begin{tabular}{|l|c|c|c|c|c|c|c|c|}
@@ -107,7 +116,36 @@ settings were used when executing ManySAT.
     varied. Speedup is computed using Minisat 2.2 as the baseline. }
     \label{tab:speedup}
 \end{table*}
-Table \ref{tab:speedup} shows the speedup
+Table \ref{tab:speedup} shows the speedup of the ManySAT 2.0 and our
+implementation for the 25 selected benchmarks. Speedups are shown for 1, 2, 4
+and 8 cores. Somewhat surprisingly, ManySAT 2.0 does not show significant
+speedup for most of the benchmarks. We are trying to understand why this
+is the case.
+
+Our implementation shows significant speedup ($>2X$) when using 4 cores and
+slightly more than that for 8 cores. Since learnt clauses are broadcast
+to all the other cores, it would seem that communication overheard for 8
+cores outweighs the sharing benefit.
+
+\begin{figure}[htbp]
+    \begin{center}
+        \includegraphics[width=\columnwidth]{images/speedup1.pdf}
+        \caption{Overall Execution Speedup.}
+        \label{fig:speedup}
+    \end{center}
+\end{figure}
+
+Figure \ref{fig:speedup} presents the \emph{overall execution speedup} for the
+problems shown in Table \ref{tab:speedup}. The overall speedup measured here is
+speedup compared to Minisat 2.2 baseline for the time taken to solve all 25
+problems by the two parallel solvers. It can be seen that the MPI-based
+parallel solver gets only slightly faster when going from 1 to 2 cores. Going
+from 2 to 4 cores produces significant speedup but speedup is already tapering
+off at 8 cores.
+
+\subsection{Effect of Clause Sharing}
+\label{sec:sharing effects}
+
 
 \section{Conclusion}
 
