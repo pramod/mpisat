@@ -30,6 +30,13 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 int numTasks;
 int taskId;
 int taskKilled = 0;
+int numImported = 0;
+int numExported = 0;
+int histSize = 0;
+int usefulImports = 0;
+int *usefulHist;
+int *importHist;
+int *exportHist;
 
 const int bigPrimes [] = {
     1000003, 1000033, 1000037, 1000039, 1000081, 1000099, 1000117, 1000121,
@@ -137,11 +144,26 @@ Solver::Solver() :
   , propagation_budget (-1)
   , asynch_interrupt   (false)
 {
+#ifdef COLLECT_PERF_STATS
+    histSize = opt_max_share_size+1;
+    usefulHist = new int[histSize];
+    importHist = new int[histSize];
+    exportHist = new int[histSize];
+
+    bzero(usefulHist, sizeof(int)*(histSize));
+    bzero(importHist, sizeof(int)*(histSize));
+    bzero(exportHist, sizeof(int)*(histSize));
+#endif
 }
 
 
 Solver::~Solver()
 {
+#ifdef COLLECT_PERF_STATS
+    delete [] usefulHist;
+    delete [] importHist;
+    delete [] exportHist;
+#endif
 }
 
 
@@ -546,6 +568,16 @@ CRef Solver::propagate()
     propagations += num_props;
     simpDB_props -= num_props;
 
+#ifdef COLLECT_PERF_STATS
+    if(confl != CRef_Undef) {
+        Clause& c = ca[confl];
+        if(c.isImported()) {
+            usefulImports += 1;
+            assert(c.size() <= histSize);
+            usefulHist[c.size()] += 1;
+        }
+    }
+#endif
     return confl;
 }
 
@@ -984,6 +1016,11 @@ void Solver::addLearntClause(vec<Lit>& clause)
         CRef cr = ca.alloc(clause, true);
         learnts.push(cr);
         attachClause(cr);
+#ifdef COLLECT_PERF_STATS
+        // set this as an imported clause
+        Clause& c = ca[cr];
+        c.setImported(1);
+#endif
         // should this be used?
         claBumpActivity(ca[cr]);
     }
@@ -1018,6 +1055,10 @@ void Solver::exportClause(vec<Lit>& clause)
         if(i == taskId) continue;
         MPI_Send(ptr, bytes, MPI_BYTE, i, MPI_CLAUSE_TAG(sz), MPI_COMM_WORLD);
     }
+#ifdef COLLECT_PERF_STATS
+    numExported += 1;
+    exportHist[sz] += 1;
+#endif
 }
 
 bool Solver::importClause(int sz, vec<Lit>& clause)
@@ -1028,6 +1069,10 @@ bool Solver::importClause(int sz, vec<Lit>& clause)
         if(i == taskId) continue;
         MPI_Iprobe(MPI_ANY_SOURCE, MPI_CLAUSE_TAG(sz), MPI_COMM_WORLD, &pending, &status);
         if(pending) {
+#ifdef COLLECT_PERF_STATS
+            numImported += 1;
+            importHist[sz] += 1;
+#endif
             clause.growTo(sz);
             int bytes = sizeof(Lit) * sz;
             MPI_Recv(clause.dataPtr(), bytes, MPI_BYTE, MPI_ANY_SOURCE, MPI_CLAUSE_TAG(sz), MPI_COMM_WORLD, &status);

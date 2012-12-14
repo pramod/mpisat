@@ -30,6 +30,13 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 extern int numTasks;
 extern int taskId;
 extern int taskKilled;
+extern int numImported;
+extern int numExported;
+extern int histSize;
+extern int usefulImports;
+extern int *usefulHist;
+extern int *importHist;
+extern int *exportHist;
 
 // CONSTANTS
 #define MPI_TAG_DONE 513            // some random number that doesn't interfere with other tags.

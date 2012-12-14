@@ -126,7 +126,13 @@ class Clause {
         unsigned learnt    : 1;
         unsigned has_extra : 1;
         unsigned reloced   : 1;
-        unsigned size      : 27; }                            header;
+#ifndef COLLECT_PERF_STATS
+        unsigned size      : 27; 
+#else
+        unsigned imported  : 1;
+        unsigned size      : 26; 
+#endif
+    } header;
     union { Lit lit; float act; uint32_t abs; CRef rel; } data[0];
 
     friend class ClauseAllocator;
@@ -139,6 +145,9 @@ class Clause {
         header.has_extra = use_extra;
         header.reloced   = 0;
         header.size      = ps.size();
+#ifdef COLLECT_PERF_STATS
+        header.imported  = 0; // not imported.
+#endif
 
         for (int i = 0; i < ps.size(); i++) 
             data[i].lit = ps[i];
@@ -171,6 +180,8 @@ public:
     bool         reloced     ()      const   { return header.reloced; }
     CRef         relocation  ()      const   { return data[0].rel; }
     void         relocate    (CRef c)        { header.reloced = 1; data[0].rel = c; }
+    void         setImported (int i)         { header.imported = i; }
+    bool         isImported  ()      const   { return header.imported; }
 
     // NOTE: somewhat unsafe to change the clause in-place! Must manually call 'calcAbstraction' afterwards for
     //       subsumption operations to behave correctly.

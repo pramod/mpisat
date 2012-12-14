@@ -34,6 +34,12 @@ using namespace Minisat;
 
 //=================================================================================================
 
+void printHist(FILE* fp, int* hist, int sz)
+{
+    for(int i = 0; i != sz; i++) {
+        fprintf(fp, "%d ", hist[i]);
+    }
+}
 
 void printStats(Solver& solver)
 {
@@ -198,6 +204,14 @@ int main(int argc, char** argv)
             fclose(res);
         }
         done:
+#ifdef COLLECT_PERF_STATS
+        printf("Process:%d\tNumber of Clauses Imported: %6d\n", taskId, numImported);
+        printf("Process:%d\tUseful Imports            : %6d\n", taskId, usefulImports);
+        printf("Process:%d\tNumber of Clauses Exported: %6d\n", taskId, numExported);
+        printf("Process:%d\tUseful Histogram: ", taskId); printHist(stdout, usefulHist, histSize); printf("\n");
+        printf("Process:%d\tImport Histogram: ", taskId); printHist(stdout, importHist, histSize); printf("\n");
+        printf("Process:%d\tExport Histogram: ", taskId); printHist(stdout, exportHist, histSize); printf("\n");
+#endif
         MPI_Finalize();
 #ifdef NDEBUG
         exit(ret == l_True ? 10 : ret == l_False ? 20 : 0);     // (faster than "return", which will invoke the destructor for 'Solver')
