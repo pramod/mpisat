@@ -121,34 +121,36 @@ Conflict-driven clause learning (CDCL) was first proposed by the
 GRASP~\cite{GRASP} solver. The key idea behind CDCL is that each time the
 solver finds a part of search space that is unsatisfiable, it analyzes this
 ``conflict'' to learn a new clause. Keeping track of the \emph{learned clauses}
-helps the solver from exploring the same ``dead-ends'' over and over again.
+helps the solver not explore the same ``dead-ends'' over and over again.
 
 \subsubsection{Modern Solvers: Chaff and MiniSat} 
 Chaff~\cite{CHAFF} improves upon GRASP using two techniques.  The first is a
-data structure that enables efficient traversal of the clause database which is
-required for unit propagation known as \textbf{Two-literal watching}.
+data structure that enables efficient traversal of the clause database when
+performing unit propagation known as \textbf{two-literal watching}.
+
 Two-literal watching maintains the invariant that two unassigned variables are
 watched in every clause. In other words, when a literal is assigned to, it is
 removed from the watchlist and replaced with an unwatched literal. When no
 unwatched literal can be found, it means the clause is eligible for unit
 propagation. The key advantage of two-literal watching is that it enables
-efficient unit propagation without requiring traversal of the entire clause
-database.
+efficient unit propagation without forcing the solver to traverse the entire
+clause database.
 
 The decision heuristic in a SAT solver determines which variable is to be
 assigned to (``branched'' on) next.  \textbf{Variable State Independent
 Decaying Sum (VSIDS)} was a decision heuristic instroduced by Chaff which tends
 to make the SAT solver explore variables that were recently involved in
-conflicts. VSIDS keeps track of an ``activity factor'' metric that is measure
+conflicts. VSIDS keeps track of an ``activity factor'' metric that is a measure
 of the number of recent conflicts a variable has been involved in.  The
 intuition behind the metric is that it improves ``search space locality'' as
 variables recently involved in conflicts are more likely to be chosen by the
 decision heuristic.  This in turn improves overall performance by helping the
 solver ``close-out'' large regions of the search space.
 
-One of the main improvements that MiniSat~\cite{MiniSat} made on Chaff was
-to exploit input pre-processing. We use MiniSat version 2.2 as the
-baseline for our work.
+One of the main improvements that MiniSat~\cite{MiniSat} made on Chaff was to
+exploit input pre-processing and simplification. MiniSat has won a number of
+the ``SAT-Race'' competitions and we use MiniSat version 2.2 as the baseline
+for our work.
 
 \subsubsection{Stochastic Local Search Algorithm}
 Another popular approach is to apply local search in the space of possible
