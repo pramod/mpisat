@@ -25,7 +25,7 @@ def get_status(filename):
         if l.strip().startswith('CPU time'):
             words = l.split()
             time = float(words[3])
-    assert time != -1
+    assert time != -1, filename
     return status, time
 
 def compare(filename, suffixes):

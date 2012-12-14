@@ -34,13 +34,6 @@ using namespace Minisat;
 
 //=================================================================================================
 
-void printHist(FILE* fp, int* hist, int sz)
-{
-    for(int i = 0; i != sz; i++) {
-        fprintf(fp, "%d ", hist[i]);
-    }
-}
-
 void printStats(Solver& solver)
 {
     double cpu_time = cpuTime();
@@ -205,12 +198,19 @@ int main(int argc, char** argv)
         }
         done:
 #ifdef COLLECT_PERF_STATS
-        printf("Process:%d\tNumber of Clauses Imported: %6d\n", taskId, numImported);
-        printf("Process:%d\tUseful Imports            : %6d\n", taskId, usefulImports);
-        printf("Process:%d\tNumber of Clauses Exported: %6d\n", taskId, numExported);
-        printf("Process:%d\tUseful Histogram: ", taskId); printHist(stdout, usefulHist, histSize); printf("\n");
-        printf("Process:%d\tImport Histogram: ", taskId); printHist(stdout, importHist, histSize); printf("\n");
-        printf("Process:%d\tExport Histogram: ", taskId); printHist(stdout, exportHist, histSize); printf("\n");
+        if(taskId == 0) {
+            // dump stats for process 0.
+            dumpStats(stdout, S.stats, S.histSize);
+            PerfStats *stats = new PerfStats[S.histSize];
+            for(int i=1; i != numTasks; i++) {
+                MPI_Status status;
+                MPI_Recv(stats, sizeof(PerfStats) * S.histSize, MPI_BYTE, MPI_ANY_SOURCE, MPI_TAG_STATS, MPI_COMM_WORLD, &status);
+                dumpStats(stdout, stats, S.histSize);
+            }
+            delete [] stats;
+        } else {
+            MPI_Send(S.stats, sizeof(PerfStats) * S.histSize, MPI_BYTE, 0, MPI_TAG_STATS, MPI_COMM_WORLD);
+        }
 #endif
         MPI_Finalize();
 #ifdef NDEBUG
