@@ -52,6 +52,9 @@ speedup. The average speedup when using four cores is about 2X.
 \end{abstract}
 
 \section{Introduction}
+The Boolean Satisfiability Problem, usually called just the SAT problem, 
+is the task of finding an assignment of all variables of a boolean 
+formula such a way that the whole formula evaluates to a true value.
 
 The Boolean Satisfiability Problem, usually called just the SAT problem, is the
 task of finding an assignment of all variables of a boolean formula such a way
@@ -155,7 +158,7 @@ The most successful SAT solvers based on this technique are WalkSAT
 \cite{WalkSAT} and GSAT \cite{GSAT}.
 
 \subsection{Parallel Approaches}
-In contrast to the sequential solvers, a relatively small number of 
+In contrast to the work in sequential solvers, a relatively small number of 
 high-performance parallel approaches have been proposed.
 
 \indent The earliest attempt for a parallel solver is PSATO \cite{PSATO}. It tries
@@ -163,13 +166,25 @@ to parallelize the sequential SATO (SAtisfiability Testing Optimized) solver
 \cite{SATO}. Both versions use trie to represent the boolean formula. The exploration
 of the search space is organized in master/slave model.
 
-\indent A couple of algorithms - GrADSAT \cite{GRADSAT} and \cite{Blochinger} -
-try to improve the successful sequential Chaff \cite{CHAFF}.
+\indent Most of the proposed approaches use DPLL as a basis. Jurkowiak et al.~\cite{Jurkowiak} propose a concurrent algorithm, based on DPLL, that uses work-stealing queues in order to balance the amount of work performed by different threads. Such load-balancing is needed, because of the irregular structure of the boolean formulas. 
 
-\indent The most recent notable parallel algorithm is ManySAT \citep{ManySAT}.
+\indent A lot of work has been done in attempt to improve Chaff. GrADSAT \cite{GRADSAT} is based on zChaff implementation and uses a large number of widely distributed commodity computational resources. Blochinger et al.~\cite{Blochinger} 
+propose another shared-memory algorithm that uses distributed mobile agents to 
+perform clause sharing. This method scales very well on computational grids.
+
+\indent Usage of divide-and-conquer approaches is also common. At
+ MiraXT~\cite{MiraXT} the threads share a database about all clauses, including the
+learned ones. The synchronization on the writing to this database is based on
+ locking. The read access does not need any synchronization. When a clause is learned 
+by a thread, it is written to the shared database.
+
+\indent pMiniSat~\cite{PMiniSat} is a parallelization of MiniSAT. It is a combination 
+of many standard techniques such as divide-and-conquer, dynamic work-stealing using 
+guiding paths, sharing short learn clauses, etc.
+
+\indent The most notable recent parallel algorithm is ManySAT \citep{ManySAT}.
 ManySAT uses a portfolio of complimentary sequential algorithms that are derived
-from variations of the traditional DPLL algorithm. Each sequential algorithm shares
-clauses, which leads to some additional improvement.
+from variations of the traditional DPLL algorithm. The basic idea is that each sequential algorithm broadcasts its learnt clauses to all the others.
 
 \section{Parallelization Strategy}
 \label{sec:strategy}
@@ -209,6 +224,11 @@ because they determine satisfiability by using heuristics to explore only
 those parts of the search space that are likely to lead to a solution.
 
 \subsubsection{Clause Sharing Based on Activity Factors}
+Modern solvers since Chaff~\cite{CHAFF} maintain an ``activity factor'' for
+each variable that is measure of the number of conflicts a variable has
+recently been involved in. Variables with a high activity factor are chosen
+by the decision heuristic when determining which part of the search to explore
+next. 
 
 Modern solvers chose to explore parts of the search space determined by
 variables with a high activity factor.  If two processes are exploring
@@ -451,14 +471,20 @@ best although there is an abberant data point for MSCS=32.
       
 \end{enumerate}
 
+\section{Conclusion}
+We presented a new technique for parallelization of SAT solvers based
+on message passing. Our algorithm uses the conflict-driven clause learning 
+and the popular MiniSAT as an implementation basis. Our results show that 
+message passing is a promising approach for parallelizing this kind of 
+applications and has some advantages over shared memory. Moreover, it is
+competitive with modern award-winning high-performance implementations such as ManySAT. \\
+\indent However, there are still many questions that have to be answered. Different 
+communication patterns in combination with a variety of heuristics and also the mentioned clustered approach are going to be further explored.
 
 \section*{Acknowledgements}
 
 We would like to thank Professor David Wentzlaff and Professor Sharad Malik for
 sharing their suggestions and ideas with us.
-
-\section{Conclusion}
-\label{sec:finish}
 
 \bibliographystyle{plain}
 \bibliography{report}
