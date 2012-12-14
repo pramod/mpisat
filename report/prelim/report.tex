@@ -210,7 +210,7 @@ of the search space again.
 One important design decision here is deciding which clauses are to be shared
 with the other processes. As our results will show, sharing everything is not
 feasible because the communication overhead outweighs any performance benefits
-this may result in. Hammadi et al. \cite{Hammadi} suggest sharing clauses which
+this may result in. Hamadi et al.~\cite{Hamadi} suggest sharing clauses which
 contain no more than a certain number of literals. The intuition here is that
 short clauses are more ``general'', while long clause are more ``specific''.
 Hence, sharing short clauses is likely to be useful to processes regardless of
@@ -472,6 +472,8 @@ best although there is an abberant data point for MSCS=32.
 \end{enumerate}
 
 \section{Conclusion}
+\label{sec:finish}
+
 We presented a new technique for parallelization of SAT solvers based
 on message passing. Our algorithm uses the conflict-driven clause learning 
 and the popular MiniSAT as an implementation basis. Our results show that 
