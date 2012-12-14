@@ -30,13 +30,6 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 int numTasks;
 int taskId;
 int taskKilled = 0;
-int numImported = 0;
-int numExported = 0;
-int histSize = 0;
-int usefulImports = 0;
-int *usefulHist;
-int *importHist;
-int *exportHist;
 
 const int bigPrimes [] = {
     1000003, 1000033, 1000037, 1000039, 1000081, 1000099, 1000117, 1000121,
@@ -146,13 +139,7 @@ Solver::Solver() :
 {
 #ifdef COLLECT_PERF_STATS
     histSize = opt_max_share_size+1;
-    usefulHist = new int[histSize];
-    importHist = new int[histSize];
-    exportHist = new int[histSize];
-
-    bzero(usefulHist, sizeof(int)*(histSize));
-    bzero(importHist, sizeof(int)*(histSize));
-    bzero(exportHist, sizeof(int)*(histSize));
+    stats = new PerfStats[histSize];
 #endif
 }
 
@@ -160,9 +147,7 @@ Solver::Solver() :
 Solver::~Solver()
 {
 #ifdef COLLECT_PERF_STATS
-    delete [] usefulHist;
-    delete [] importHist;
-    delete [] exportHist;
+    delete [] stats;
 #endif
 }
 
@@ -572,9 +557,9 @@ CRef Solver::propagate()
     if(confl != CRef_Undef) {
         Clause& c = ca[confl];
         if(c.isImported()) {
-            usefulImports += 1;
             assert(c.size() <= histSize);
-            usefulHist[c.size()] += 1;
+            stats[c.size()].useful += 1;
+            c.setImported(0);
         }
     }
 #endif
@@ -1056,8 +1041,7 @@ void Solver::exportClause(vec<Lit>& clause)
         MPI_Send(ptr, bytes, MPI_BYTE, i, MPI_CLAUSE_TAG(sz), MPI_COMM_WORLD);
     }
 #ifdef COLLECT_PERF_STATS
-    numExported += 1;
-    exportHist[sz] += 1;
+    stats[sz].exported += 1;
 #endif
 }
 
@@ -1070,8 +1054,7 @@ bool Solver::importClause(int sz, vec<Lit>& clause)
         MPI_Iprobe(MPI_ANY_SOURCE, MPI_CLAUSE_TAG(sz), MPI_COMM_WORLD, &pending, &status);
         if(pending) {
 #ifdef COLLECT_PERF_STATS
-            numImported += 1;
-            importHist[sz] += 1;
+            stats[sz].imported += 1;
 #endif
             clause.growTo(sz);
             int bytes = sizeof(Lit) * sz;
@@ -1093,3 +1076,62 @@ void Solver::importAllClauses()
         } while(more);
     }
 }
+
+#ifdef COLLECT_PERF_STATS
+namespace Minisat {
+
+void dumpStats(FILE* out, PerfStats* stats, int histSize)
+{
+    fprintf(out, "Imported : %6d : ", getTotalImported(stats, histSize));
+    printImportedHist(out, stats, histSize); printf("\n");
+    fprintf(out, "Useful   : %6d : ", getTotalUseful(stats, histSize));
+    printUsefulHist(out, stats, histSize); printf("\n");
+    fprintf(out, "Exported : %6d : ", getTotalExported(stats, histSize));
+    printExportedHist(out, stats, histSize); printf("\n");
+}
+
+
+int getTotalImported(PerfStats* stats, int sz)
+{
+    int sum=0;
+    for(int i=0; i != sz; i++) {
+        sum += stats[i].imported;
+    }
+    return sum;
+}
+
+int getTotalExported(PerfStats* stats, int sz)
+{
+    int sum=0;
+    for(int i=0; i != sz; i++) {
+        sum += stats[i].exported;
+    }
+    return sum;
+}
+
+int getTotalUseful(PerfStats* stats, int sz)
+{
+    int sum=0;
+    for(int i=0; i != sz; i++) {
+        sum += stats[i].useful;
+    }
+    return sum;
+}
+
+void printImportedHist(FILE* out, PerfStats* stats, int sz)
+{
+    for(int i=0; i != sz; i++) { fprintf(out, "%5d ", stats[i].imported); }
+}
+
+void printUsefulHist(FILE* out, PerfStats* stats, int sz)
+{
+    for(int i=0; i != sz; i++) { fprintf(out, "%5d ", stats[i].useful); }
+}
+
+void printExportedHist(FILE* out, PerfStats* stats, int sz)
+{
+    for(int i=0; i != sz; i++) { fprintf(out, "%5d ", stats[i].exported); }
+}
+
+}
+#endif

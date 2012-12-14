@@ -30,20 +30,42 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 extern int numTasks;
 extern int taskId;
 extern int taskKilled;
-extern int numImported;
-extern int numExported;
-extern int histSize;
-extern int usefulImports;
-extern int *usefulHist;
-extern int *importHist;
-extern int *exportHist;
 
 // CONSTANTS
-#define MPI_TAG_DONE 513            // some random number that doesn't interfere with other tags.
 #define MPI_CLAUSE_TAG(i) (16+i)    // the tag for clauses of size i.
+#define MPI_TAG_DONE 513            // some random number that doesn't interfere with other tags.
+#define MPI_TAG_STATS 514
 
 
 namespace Minisat {
+
+//=================================================================================================
+// PerfStats -- struct contains performance counter information
+#ifdef COLLECT_PERF_STATS
+struct PerfStats
+{
+    int imported;
+    int useful;
+    int exported;
+
+    PerfStats() 
+      : imported(0)
+      , useful(0)
+      , exported(0)
+    {
+    }
+};
+
+int getTotalImported(PerfStats* stats, int sz);
+int getTotalExported(PerfStats* stats, int sz);
+int getTotalUseful(PerfStats* stats, int sz);
+
+void dumpStats(FILE* out, PerfStats* stats, int histSize);
+
+void printImportedHist(FILE* out, PerfStats* stats, int sz);
+void printUsefulHist(FILE* out, PerfStats* stats, int sz);
+void printExportedHist(FILE* out, PerfStats* stats, int sz);
+#endif
 
 //=================================================================================================
 // Solver -- the main class:
@@ -153,6 +175,10 @@ public:
     uint64_t solves, starts, decisions, rnd_decisions, propagations, conflicts;
     uint64_t dec_vars, clauses_literals, learnts_literals, max_literals, tot_literals;
 
+#ifdef COLLECT_PERF_STATS
+    int histSize;
+    PerfStats* stats;
+#endif
 protected:
 
     // Helper structures:
