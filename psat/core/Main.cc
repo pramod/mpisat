@@ -198,6 +198,7 @@ int main(int argc, char** argv)
         }
         done:
 #ifdef COLLECT_PERF_STATS
+        MPI_Barrier(MPI_COMM_WORLD);
         if(taskId == 0) {
             // dump stats for process 0.
             dumpStats(stdout, S.stats, S.histSize);

@@ -24,7 +24,8 @@ LFLAGS    ?= -Wall
 
 COPTIMIZE ?= -O3
 
-CFLAGS    += -I$(MROOT) -D __STDC_LIMIT_MACROS -D __STDC_FORMAT_MACROS -D COLLECT_PERF_STATS
+# disabling perf stats for now.
+CFLAGS    += -I$(MROOT) -D __STDC_LIMIT_MACROS -D __STDC_FORMAT_MACROS # -D COLLECT_PERF_STATS
 LFLAGS    += -lz
 
 .PHONY : s p d r rs clean 

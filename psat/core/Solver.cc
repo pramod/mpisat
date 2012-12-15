@@ -1020,7 +1020,6 @@ bool Solver::shouldExit()
         int done;
         MPI_Recv(&done, 1, MPI_INT, MPI_ANY_SOURCE, MPI_TAG_DONE, MPI_COMM_WORLD, &status);
         assert(done == 1);
-        printf("taskID:%d GOT DONE MESSAGE!\n", taskId);
         taskKilled = 1;
         return true;
     } else {

@@ -180,8 +180,10 @@ public:
     bool         reloced     ()      const   { return header.reloced; }
     CRef         relocation  ()      const   { return data[0].rel; }
     void         relocate    (CRef c)        { header.reloced = 1; data[0].rel = c; }
+#ifdef COLLECT_PERF_STATS
     void         setImported (int i)         { header.imported = i; }
     bool         isImported  ()      const   { return header.imported; }
+#endif
 
     // NOTE: somewhat unsafe to change the clause in-place! Must manually call 'calcAbstraction' afterwards for
     //       subsumption operations to behave correctly.

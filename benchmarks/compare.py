@@ -18,7 +18,7 @@ def get_status(filename):
         elif l.strip() == 'INDETERMINATE':
             status = TIMEOUT
             break
-    assert status != -1
+    assert status != -1, filename
 
     time = -1
     for l in lines:
@@ -61,7 +61,7 @@ def compare_all(filelist, suffixes):
             ti = compare(line.strip(), suffixes)
             t = add(t, ti)
 
-    n = [ni / t[0] for ni in t[1:]]
+    n = [t[0] / ni for ni in t[1:]]
     print (' '*40) + (' '.join([('%6.1f' % ti) for ti in n]))
 
 compare_all(sys.argv[1], sys.argv[2:])
