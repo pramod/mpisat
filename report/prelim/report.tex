@@ -272,10 +272,10 @@ have differing activity factors, the variable with higher activity is chosen.
                         minimum height=8mm,minimum width=40mm, rounded corners=7]
     \begin{center}
     \begin{tikzpicture}
-        \node[box] (c0) at (0,0) {\small{core 0}};
-        \node[box] (c1) at (2,0) {\small{core 1}};
-        \node[box] (c2) at (4,0) {\small{core 2}};
-        \node[box] (c3) at (6,0) {\small{core 3}};
+        \node[box] (c0) at (0,0) {\small{process 0}};
+        \node[box] (c1) at (2,0) {\small{process 1}};
+        \node[box] (c2) at (4,0) {\small{process 2}};
+        \node[box] (c3) at (6,0) {\small{process 3}};
         \node[bigbox] (ic0) at (3,1.5) {\small{broadcast interconnect}};
         \draw[<->, thick] (c0.north) -- (ic0.210);
         \draw[<->, thick] (c1.north) -- (ic0.240);
@@ -310,14 +310,14 @@ in this preliminary report.
                         minimum height=8mm,minimum width=40mm, rounded corners=7]
     \begin{center}
     \begin{tikzpicture}
-        \node[box] (c0) at (0,0) {\small{core 0}};
-        \node[box] (c1) at (2,0) {\small{core 1}};
-        \node[box] (c2) at (4,0) {\small{core 2}};
-        \node[box] (c3) at (6,0) {\small{core 3}};
-        \node[box] (c4) at (8,0) {\small{core 4}};
-        \node[box] (c5) at (10,0) {\small{core 5}};
-        \node[box] (c6) at (12,0) {\small{core 6}};
-        \node[box] (c7) at (14,0) {\small{core 7}};
+        \node[box] (c0) at (0,0) {\small{process 0}};
+        \node[box] (c1) at (2,0) {\small{process 1}};
+        \node[box] (c2) at (4,0) {\small{process 2}};
+        \node[box] (c3) at (6,0) {\small{process 3}};
+        \node[box] (c4) at (8,0) {\small{process 4}};
+        \node[box] (c5) at (10,0) {\small{process 5}};
+        \node[box] (c6) at (12,0) {\small{process 6}};
+        \node[box] (c7) at (14,0) {\small{process 7}};
         \node[bigbox] (ic0) at (3,1.5) {\small{cluster interconnect}};
         \node[bigbox] (ic1) at (11,1.5) {\small{cluster interconnect}};
         \node[bigbox] (ic2) at (7,3.0) {\small{global interconnect}};
@@ -472,6 +472,39 @@ subsection.
 best although there is an abberant data point for MSCS=32.
       
 \end{enumerate}
+
+\subsection{Measuring Impact of Clause Sharing}
+
+\begin{figure*}[htbp]
+    \includegraphics[width=2\columnwidth]{images/useful.pdf}
+    \caption{Percentage of useful clauses as a fraction of imported clause vs. clause size for 
+             (left) mizh-sha0-36-4 on 2 cores and (right) ibm-2004-29-k55 on 4 cores.}
+    \label{fig:useful}
+\end{figure*}
+
+
+To quantify the impact of clause sharing, we instrumented the solver to keep
+track of learnt clauses that arrived from another process and then count the
+number of such clauses that were involved in at least one conflict.  We refer
+to a learned class obtained from another process as an ``imported''
+clause.\footnote{The term ``imported'' clause is borrowed from the ManySAT
+codebase.} An imported clause that subsequently causes a conflict is called a
+``useful'' clause. Clearly, imported clauses that never get involved in a
+conflict are undesireable because they simply contribute to the communication
+overhead without aiding any of the computation.
+
+Figure \ref{fig:useful} shows the percentage of clauses and the distribution of
+their sizes for two benchmarks. The graph on the left is for
+\textit{mizh-sha0-36-4} executed on two cores which has poor speedup. The graph
+on the right is for \textit{ibm-2004-29-k55} executing on 4 cores. This has
+good speedup. \textit{mizh-sha0-36-4} shares a lot of useful short clauses but
+very few useful long clauses. For \textit{ibm-2004-29-k55}, we see that the
+distribution of the length of useful clauses is much more uniform. This pattern
+was observed in a few other benchmarks with good speedup, which suggests that
+successfully sharing useful long clauses is important for performance. One
+intuitive explanation for this could be that if the processes are sharing
+useful long clauses, it means they are co-operating to a greater extent than if
+they are just sharing useful short clauses.
 
 \section{Conclusion}
 \label{sec:finish}
