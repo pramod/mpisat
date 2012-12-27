@@ -5,6 +5,8 @@ SAT         = 0
 UNSAT       = 1
 TIMEOUT     = 2
 
+STATUS_STRINGS = [ "SAT", "UNSAT", "TIMEOUT" ]
+
 def get_status(filename):
     status = -1
     lines = open(filename, 'rt').read().split('\n')
@@ -39,7 +41,8 @@ def compare(filename, suffixes):
 
     bs = stats[0]
     for s in stats:
-        assert s == bs, 'SAT SOLVER BUG!'
+        if s != bs:
+            assert False, 'SAT SOLVER BUG for %s! expected=%s actual=%s' % (filename, STATUS_STRINGS[bs], STATUS_STRINGS[s])
     t0 = times[0]
 
     speedups = []
