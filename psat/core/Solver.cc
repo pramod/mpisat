@@ -1,5 +1,4 @@
 /***************************************************************************************[Solver.cc]
-return activity[x] > activity[y];
 Copyright (c) 2003-2006, Niklas Een, Niklas Sorensson
 Copyright (c) 2007-2010, Niklas Sorensson
 
@@ -78,10 +77,11 @@ static BoolOption    opt_luby_restart      (_cat, "luby",           "Use the Lub
 static IntOption     opt_restart_first     (_cat, "rfirst",         "The base restart interval", 100, IntRange(1, INT32_MAX));
 static DoubleOption  opt_restart_inc       (_cat, "rinc",           "Restart interval increase factor", 2, DoubleRange(1, false, HUGE_VAL, false));
 static DoubleOption  opt_garbage_frac      (_cat, "gc-frac",        "The fraction of wasted memory allowed before a garbage collection is triggered",  0.20, DoubleRange(0, false, HUGE_VAL, false));
-
 // new options!
 static BoolOption    opt_activity_tiebreak (_cat, "act-tie-break",  "Use the core-based tie breaker for activity factor", true);
 static IntOption     opt_max_share_size    (_cat, "max-share-size", "Maximum size of clauses that are shared.", 16);
+static BoolOption    opt_mixed_restart     (_cat, "mixed-restart",  "Use the mixed restart policy", false);
+static BoolOption    opt_bump_imported     (_cat, "bump-imported",  "Bump activity factor of imported clauses.", false);
 
 
 //=================================================================================================
@@ -104,7 +104,7 @@ Solver::Solver() :
   , rnd_init_act     (opt_rnd_init_act)
   , garbage_frac     (opt_garbage_frac)
   , restart_first    (opt_restart_first)
-  , restart_inc      (opt_restart_inc)
+  , restart_inc      ((opt_mixed_restart && (taskId % 2 == 0)) ? opt_restart_inc : opt_restart_inc / 2)
 
     // Parameters (the rest):
     //
@@ -1001,6 +1001,12 @@ void Solver::addLearntClause(vec<Lit>& clause)
         CRef cr = ca.alloc(clause, true);
         learnts.push(cr);
         attachClause(cr);
+
+        if(opt_bump_imported) {
+            for(int i=0; i != clause.size(); i++) {
+                varBumpActivity(var(clause[i]));
+            }
+        }
 #ifdef COLLECT_PERF_STATS
         // set this as an imported clause
         Clause& c = ca[cr];
