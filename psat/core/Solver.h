@@ -175,6 +175,12 @@ public:
     uint64_t solves, starts, decisions, rnd_decisions, propagations, conflicts;
     uint64_t dec_vars, clauses_literals, learnts_literals, max_literals, tot_literals;
 
+    bool valid;
+    int clusterStart;
+    int clusterEnd;
+    int clusterSize;
+    int numClusters;
+    int thisCluster;
 #ifdef COLLECT_PERF_STATS
     int histSize;
     PerfStats* stats;
@@ -185,6 +191,8 @@ protected:
     //
     struct VarData { CRef reason; int level; };
     static inline VarData mkVarData(CRef cr, int l){ VarData d = {cr, l}; return d; }
+
+    bool inline sameCluster(int id) { return (id >= clusterStart && id < clusterEnd); }
 
     struct Watcher {
         CRef cref;

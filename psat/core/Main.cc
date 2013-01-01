@@ -164,7 +164,7 @@ int main(int argc, char** argv)
             printf("UNSATISFIABLE\n");
             exit(20);
         }
-        
+
         vec<Lit> dummy;
         lbool ret = S.solveLimited(dummy);
 
