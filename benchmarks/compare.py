@@ -40,19 +40,24 @@ def compare(filename, suffixes):
         times.append(time)
 
     bs = stats[0]
-    for s in stats:
-        if s != bs:
+    for i, s in enumerate(stats):
+        if s != bs and s != TIMEOUT:
             assert False, 'SAT SOLVER BUG for %s! expected=%s actual=%s' % (filename, STATUS_STRINGS[bs], STATUS_STRINGS[s])
     t0 = times[0]
 
+    timed_out = False
     speedups = []
-    for t in times[1:]:
-        speedup = t0 / t
-        speedups.append(speedup)
+    for s, t in itertools.izip(stats[1:], times[1:]):
+        if s != TIMEOUT:
+            speedup = t0 / t
+            speedups.append(speedup)
+        else:
+            timed_out = True
+            speedups.append(-1)
 
-    speed_strings = ('%-40s' % filename) + (' '.join([('%6.1f' % s) for s in speedups]))
+    speed_strings = ('%-40s' % filename) + (' '.join([('%6.1f' % s if s != -1 else ('%6s' % '--')) for s in speedups]))
     print speed_strings
-    return times
+    return times, timed_out
 
 def add(t1, t2):
     return [x+y for x,y in itertools.izip(t1, t2)]
@@ -61,8 +66,9 @@ def compare_all(filelist, suffixes):
     t = [0] * len(suffixes)
     for line in open(filelist, 'rt'):
         if line.strip():
-            ti = compare(line.strip(), suffixes)
-            t = add(t, ti)
+            ti, timedout = compare(line.strip(), suffixes)
+            if not timedout:
+                t = add(t, ti)
 
     n = [t[0] / ni for ni in t[1:]]
     print (' '*40) + (' '.join([('%6.1f' % ti) for ti in n]))

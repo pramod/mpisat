@@ -78,10 +78,12 @@ static IntOption     opt_restart_first     (_cat, "rfirst",         "The base re
 static DoubleOption  opt_restart_inc       (_cat, "rinc",           "Restart interval increase factor", 2, DoubleRange(1, false, HUGE_VAL, false));
 static DoubleOption  opt_garbage_frac      (_cat, "gc-frac",        "The fraction of wasted memory allowed before a garbage collection is triggered",  0.20, DoubleRange(0, false, HUGE_VAL, false));
 // new options!
-static BoolOption    opt_activity_tiebreak (_cat, "act-tie-break",  "Use the core-based tie breaker for activity factor", true);
-static IntOption     opt_max_share_size    (_cat, "max-share-size", "Maximum size of clauses that are shared.", 16);
-static BoolOption    opt_mixed_restart     (_cat, "mixed-restart",  "Use the mixed restart policy", false);
-static BoolOption    opt_bump_imported     (_cat, "bump-imported",  "Bump activity factor of imported clauses.", false);
+static BoolOption    opt_activity_tiebreak (_cat, "act-tie-break",      "Use the core-based tie breaker for activity factor", true);
+static IntOption     opt_max_share_size    (_cat, "max-share-size",     "Maximum size of clauses that are shared.", 16);
+static BoolOption    opt_mixed_restart     (_cat, "mixed-restart",      "Use the mixed restart policy", false);
+static BoolOption    opt_bump_imported     (_cat, "bump-imported",      "Bump activity factor of imported clauses.", false);
+static IntOption     opt_cluster_size      (_cat, "cluster-size",       "Size of each cluster (default=0: no clustering).", 0);
+static IntOption     opt_max_shareout_size (_cat, "max-shareout-size",  "Maximum size of clauses shared outside the cluster (default=4).", 4);
 
 
 //=================================================================================================
@@ -141,6 +143,24 @@ Solver::Solver() :
     histSize = opt_max_share_size+1;
     stats = new PerfStats[histSize];
 #endif
+    clusterSize = opt_cluster_size;
+    valid = true;
+    if(clusterSize) {
+        if((numTasks % clusterSize) != 0) {
+            valid = false;
+            numClusters = (numTasks / clusterSize) + 1;
+        } else {
+            numClusters = numTasks / clusterSize;
+        }
+        clusterStart = (taskId / clusterSize) * clusterSize;
+        clusterEnd   = ((clusterStart + clusterSize) <= numTasks) ? clusterStart + clusterSize : numTasks;
+        thisCluster  = (taskId / clusterSize);
+    } else {
+        numClusters     = -1;
+        clusterStart    = -1;
+        clusterEnd      = -1;
+        thisCluster     = -1;
+    }
 }
 
 
@@ -1038,16 +1058,32 @@ void Solver::exportClause(vec<Lit>& clause)
     int sz = clause.size();
     if(sz > opt_max_share_size) { return; }
 
-    // pipe this to all the other processes.
-    Lit* ptr = clause.dataPtr();
-    int bytes = sizeof(Lit) * sz;
-    for(int i = 0; i != numTasks; i++) {
-        if(i == taskId) continue;
-        MPI_Send(ptr, bytes, MPI_BYTE, i, MPI_CLAUSE_TAG(sz), MPI_COMM_WORLD);
-    }
+    if(clusterSize == 0) {
+        // pipe this to all the other processes.
+        Lit* ptr = clause.dataPtr();
+        int bytes = sizeof(Lit) * sz;
+        for(int i = 0; i != numTasks; i++) {
+            if(i == taskId) continue;
+            MPI_Send(ptr, bytes, MPI_BYTE, i, MPI_CLAUSE_TAG(sz), MPI_COMM_WORLD);
+        }
 #ifdef COLLECT_PERF_STATS
-    stats[sz].exported += 1;
+        stats[sz].exported += 1;
 #endif
+    } else {
+        // some clustering is present.
+        Lit* ptr = clause.dataPtr();
+        int bytes = sizeof(Lit) * sz;
+        for(int i = clusterStart; i < clusterEnd; i++) {
+            if(i == taskId) continue;
+            MPI_Send(ptr, bytes, MPI_BYTE, i, MPI_CLAUSE_TAG(sz), MPI_COMM_WORLD);
+        }
+        if(sz < opt_max_shareout_size) {
+            for(int i = 0; i < numClusters; i++) {
+                if(i == thisCluster) continue;
+                MPI_Send(ptr, bytes, MPI_BYTE, i*clusterSize, MPI_CLAUSE_TAG(sz), MPI_COMM_WORLD);
+            }
+        }
+    }
 }
 
 bool Solver::importClause(int sz, vec<Lit>& clause)
@@ -1064,6 +1100,15 @@ bool Solver::importClause(int sz, vec<Lit>& clause)
             clause.growTo(sz);
             int bytes = sizeof(Lit) * sz;
             MPI_Recv(clause.dataPtr(), bytes, MPI_BYTE, MPI_ANY_SOURCE, MPI_CLAUSE_TAG(sz), MPI_COMM_WORLD, &status);
+
+            if(!sameCluster(status.MPI_SOURCE)) {
+                // broadcast this to other parts of the same cluster.
+                for(int i = clusterStart; i != clusterEnd; i++) {
+                    if(i == taskId) continue;
+                    MPI_Send(clause.dataPtr(), bytes, MPI_BYTE, i, MPI_CLAUSE_TAG(sz), MPI_COMM_WORLD);
+                }
+            }
+
             return true;
         }
     }
