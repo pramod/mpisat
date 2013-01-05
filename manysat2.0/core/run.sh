@@ -3,8 +3,8 @@
 for i in `cat benchmarks/sr2008/good.list`
 do
     echo "running $i"
-    ./manysat2.0 -cpu-lim=1200 -ncores=1 benchmarks/sr2008/$i >& benchmarks/sr2008/$i.manysat1.out
-    ./manysat2.0 -cpu-lim=1200 -ncores=2 benchmarks/sr2008/$i >& benchmarks/sr2008/$i.manysat2.out
-    ./manysat2.0 -cpu-lim=1200 -ncores=4 benchmarks/sr2008/$i >& benchmarks/sr2008/$i.manysat4.out
-    ./manysat2.0 -cpu-lim=1200 -ncores=8 benchmarks/sr2008/$i >& benchmarks/sr2008/$i.manysat8.out
+    for c in 1 2 4 8 16;
+    do
+        echo ./manysat2.0 -cpu-lim=1200 -ncores=$c benchmarks/sr2008/$i benchmarks/sr2008/$i.manysat_r2_$c.out
+    done
 done

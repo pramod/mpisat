@@ -201,16 +201,34 @@ int main(int argc, char** argv)
         MPI_Barrier(MPI_COMM_WORLD);
         if(taskId == 0) {
             // dump stats for process 0.
-            dumpStats(stdout, S.stats, S.histSize);
+            dumpStats(stdout, S.szStats, S.histSize);
             PerfStats *stats = new PerfStats[S.histSize];
             for(int i=1; i != numTasks; i++) {
                 MPI_Status status;
-                MPI_Recv(stats, sizeof(PerfStats) * S.histSize, MPI_BYTE, MPI_ANY_SOURCE, MPI_TAG_STATS, MPI_COMM_WORLD, &status);
+                MPI_Recv(stats, sizeof(PerfStats) * S.histSize, MPI_BYTE, i, MPI_TAG_STATS, MPI_COMM_WORLD, &status);
                 dumpStats(stdout, stats, S.histSize);
             }
+
+            dumpStats(stdout, S.coreStats, numTasks);
+            for(int i=1; i != numTasks; i++) {
+                MPI_Status status;
+                MPI_Recv(stats, sizeof(PerfStats) * numTasks, MPI_BYTE, i, MPI_TAG_STATS2, MPI_COMM_WORLD, &status);
+                dumpStats(stdout, stats, numTasks);
+            }
+            printf("%8d ", numTieBreaks);
+            for(int i=1; i != numTasks; i++) {
+                int num;
+                MPI_Status status;
+                MPI_Recv(&num, 1, MPI_INT, i, MPI_TAG_STATS3, MPI_COMM_WORLD, &status);
+                printf("%8d ", num);
+            }
+            printf("\n");
+
             delete [] stats;
         } else {
-            MPI_Send(S.stats, sizeof(PerfStats) * S.histSize, MPI_BYTE, 0, MPI_TAG_STATS, MPI_COMM_WORLD);
+            MPI_Send(S.szStats, sizeof(PerfStats) * S.histSize, MPI_BYTE, 0, MPI_TAG_STATS, MPI_COMM_WORLD);
+            MPI_Send(S.coreStats, sizeof(PerfStats) * numTasks, MPI_BYTE, 0, MPI_TAG_STATS2, MPI_COMM_WORLD);
+            MPI_Send(&numTieBreaks, 1, MPI_INT, 0, MPI_TAG_STATS3, MPI_COMM_WORLD);
         }
 #endif
         MPI_Finalize();

@@ -29,30 +29,35 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 int numTasks;
 int taskId;
 int taskKilled = 0;
+int numTieBreaks = 0;
 
 const int bigPrimes [] = {
-    1000003, 1000033, 1000037, 1000039, 1000081, 1000099, 1000117, 1000121,
-    1000133, 1000151, 1000159, 1000171, 1000183, 1000187, 1000193, 1000199,
-    1000211, 1000213, 1000231, 1000249, 1000253, 1000273, 1000289, 1000291,
-    1000303, 1000313, 1000333, 1000357, 1000367, 1000381, 1000393, 1000397,
-    1000403, 1000409, 1000423, 1000427, 1000429, 1000453, 1000457, 1000507,
-    1000537, 1000541, 1000547, 1000577, 1000579, 1000589, 1000609, 1000619,
-    1000621, 1000639, 1000651, 1000667, 1000669, 1000679, 1000691, 1000697,
-    1000721, 1000723, 1000763, 1000777, 1000793, 1000829, 1000847, 1000849,
-    1000859, 1000861, 1000889, 1000907, 1000919, 1000921, 1000931, 1000969,
-    1000973, 1000981, 1000999, 1001003, 1001017, 1001023, 1001027, 1001041
+    1000003, 1000033, 1000037, 1000039,     1000081, 1000099, 1000117, 1000121,
+    1000133, 1000151, 1000159, 1000171,     1000183, 1000187, 1000193, 1000199,
+    1000211, 1000213, 1000231, 1000249,     1000253, 1000273, 1000289, 1000291,
+    1000303, 1000313, 1000333, 1000357,     1000367, 1000381, 1000393, 1000397, /* 32 */
+
+    1000403, 1000409, 1000423, 1000427,     1000429, 1000453, 1000457, 1000507,
+    1000537, 1000541, 1000547, 1000577,     1000579, 1000589, 1000609, 1000619,
+    1000621, 1000639, 1000651, 1000667,     1000669, 1000679, 1000691, 1000697,
+    1000721, 1000723, 1000763, 1000777,     1000793, 1000829, 1000847, 1000849, /* 64 */
+
+    1000859, 1000861, 1000889, 1000907,     1000919, 1000921, 1000931, 1000969,
+    1000973, 1000981, 1000999, 1001003,     1001017, 1001023, 1001027, 1001041  /* 80 */
 };
 const int smallPrimes[] = {
-    101, 103, 107, 109, 113, 127, 131, 137,
-    139, 149, 151, 157, 163, 167, 173, 179,
-    181, 191, 193, 197, 199, 211, 223, 227,
-    229, 233, 239, 241, 251, 257, 263, 269,
-    271, 277, 281, 283, 293, 307, 311, 313,
-    317, 331, 337, 347, 349, 353, 359, 367,
-    373, 379, 383, 389, 397, 401, 409, 419,
-    421, 431, 433, 439, 443, 449, 457, 461,
-    463, 467, 479, 487, 491, 499, 503, 509,
-    521, 523, 541, 547, 557, 563, 569, 571
+    101, 103, 107, 109,     113, 127, 131, 137,
+    139, 149, 151, 157,     163, 167, 173, 179,
+    181, 191, 193, 197,     199, 211, 223, 227,
+    229, 233, 239, 241,     251, 257, 263, 269, /* 32 */
+
+    271, 277, 281, 283,     293, 307, 311, 313,
+    317, 331, 337, 347,     349, 353, 359, 367,
+    373, 379, 383, 389,     397, 401, 409, 419,
+    421, 431, 433, 439,     443, 449, 457, 461, /* 64 */
+
+    463, 467, 479, 487,     491, 499, 503, 509,
+    521, 523, 541, 547,     557, 563, 569, 571  /* 80 */
 };
 
 const int numBigPrimes = sizeof(bigPrimes) / sizeof(bigPrimes[0]);
@@ -84,6 +89,7 @@ static BoolOption    opt_mixed_restart     (_cat, "mixed-restart",      "Use the
 static BoolOption    opt_bump_imported     (_cat, "bump-imported",      "Bump activity factor of imported clauses.", false);
 static IntOption     opt_cluster_size      (_cat, "cluster-size",       "Size of each cluster (default=0: no clustering).", 0);
 static IntOption     opt_max_shareout_size (_cat, "max-shareout-size",  "Maximum size of clauses shared outside the cluster (default=4).", 4);
+static DoubleOption  opt_activity_ff       (_cat, "activity-ff",        "Fudge factor to use when comparing activities (default=1.0; no fudging).", 1.0);
 
 
 //=================================================================================================
@@ -129,7 +135,7 @@ Solver::Solver() :
   , qhead              (0)
   , simpDB_assigns     (-1)
   , simpDB_props       (0)
-  , order_heap         (VarOrderLt(activity, opt_activity_tiebreak))
+  , order_heap         (VarOrderLt(activity, opt_activity_tiebreak, opt_activity_ff))
   , progress_estimate  (0)
   , remove_satisfied   (true)
 
@@ -141,7 +147,8 @@ Solver::Solver() :
 {
 #ifdef COLLECT_PERF_STATS
     histSize = opt_max_share_size+1;
-    stats = new PerfStats[histSize];
+    szStats = new PerfStats[histSize];
+    coreStats = new PerfStats[numTasks];
 #endif
     clusterSize = opt_cluster_size;
     valid = true;
@@ -156,10 +163,10 @@ Solver::Solver() :
         clusterEnd   = ((clusterStart + clusterSize) <= numTasks) ? clusterStart + clusterSize : numTasks;
         thisCluster  = (taskId / clusterSize);
     } else {
-        numClusters     = -1;
-        clusterStart    = -1;
-        clusterEnd      = -1;
-        thisCluster     = -1;
+        numClusters     = 1;
+        clusterStart    = 0;
+        clusterEnd      = numTasks;
+        thisCluster     = 0;
     }
 }
 
@@ -167,7 +174,8 @@ Solver::Solver() :
 Solver::~Solver()
 {
 #ifdef COLLECT_PERF_STATS
-    delete [] stats;
+    delete [] szStats;
+    delete [] coreStats;
 #endif
 }
 
@@ -578,7 +586,10 @@ CRef Solver::propagate()
         Clause& c = ca[confl];
         if(c.isImported()) {
             assert(c.size() <= histSize);
-            stats[c.size()].useful += 1;
+            szStats[c.size()].useful += 1;
+#ifdef TRACK_IMPORTED
+            coreStats[c.getImportSource()].useful += 1;
+#endif
             c.setImported(0);
         }
     }
@@ -1007,7 +1018,7 @@ void Solver::garbageCollect()
     to.moveTo(ca);
 }
 
-void Solver::addLearntClause(vec<Lit>& clause)
+void Solver::addLearntClause(vec<Lit>& clause, int source)
 {
     if (clause.size() == 1){
         if(value(clause[0]) == l_False) {
@@ -1024,13 +1035,16 @@ void Solver::addLearntClause(vec<Lit>& clause)
 
         if(opt_bump_imported) {
             for(int i=0; i != clause.size(); i++) {
-                varBumpActivity(var(clause[i]));
+                varBumpActivity(var(clause[i]), var_inc/10.0);
             }
         }
 #ifdef COLLECT_PERF_STATS
         // set this as an imported clause
         Clause& c = ca[cr];
         c.setImported(1);
+#endif
+#ifdef TRACK_IMPORTED
+        c.setImportSource(source);
 #endif
         // should this be used?
         claBumpActivity(ca[cr]);
@@ -1067,7 +1081,7 @@ void Solver::exportClause(vec<Lit>& clause)
             MPI_Send(ptr, bytes, MPI_BYTE, i, MPI_CLAUSE_TAG(sz), MPI_COMM_WORLD);
         }
 #ifdef COLLECT_PERF_STATS
-        stats[sz].exported += 1;
+        szStats[sz].exported += 1;
 #endif
     } else {
         // some clustering is present.
@@ -1086,7 +1100,7 @@ void Solver::exportClause(vec<Lit>& clause)
     }
 }
 
-bool Solver::importClause(int sz, vec<Lit>& clause)
+bool Solver::importClause(int sz, vec<Lit>& clause, int& source)
 {
     int pending=0;
     MPI_Status status;
@@ -1095,13 +1109,19 @@ bool Solver::importClause(int sz, vec<Lit>& clause)
         MPI_Iprobe(MPI_ANY_SOURCE, MPI_CLAUSE_TAG(sz), MPI_COMM_WORLD, &pending, &status);
         if(pending) {
 #ifdef COLLECT_PERF_STATS
-            stats[sz].imported += 1;
+            szStats[sz].imported += 1;
 #endif
             clause.growTo(sz);
             int bytes = sizeof(Lit) * sz;
             MPI_Recv(clause.dataPtr(), bytes, MPI_BYTE, MPI_ANY_SOURCE, MPI_CLAUSE_TAG(sz), MPI_COMM_WORLD, &status);
+            source = status.MPI_SOURCE;
 
-            if(!sameCluster(status.MPI_SOURCE)) {
+#ifdef COLLECT_PERF_STATS
+#ifdef TRACK_IMPORTED
+            coreStats[source].imported += 1;
+#endif
+#endif
+            if(numClusters != 1 && !sameCluster(status.MPI_SOURCE)) {
                 // broadcast this to other parts of the same cluster.
                 for(int i = clusterStart; i != clusterEnd; i++) {
                     if(i == taskId) continue;
@@ -1121,8 +1141,9 @@ void Solver::importAllClauses()
     for(int sz = 1; sz <= opt_max_share_size; sz++) {
         bool more = false;
         do {
-            more = importClause(sz, clause);
-            if(more) { addLearntClause(clause); }
+            int source;
+            more = importClause(sz, clause, source);
+            if(more) { addLearntClause(clause, source); }
         } while(more);
     }
 }

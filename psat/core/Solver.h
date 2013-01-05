@@ -30,11 +30,14 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 extern int numTasks;
 extern int taskId;
 extern int taskKilled;
+extern int numTieBreaks;
 
 // CONSTANTS
 #define MPI_CLAUSE_TAG(i) (16+i)    // the tag for clauses of size i.
 #define MPI_TAG_DONE 513            // some random number that doesn't interfere with other tags.
 #define MPI_TAG_STATS 514
+#define MPI_TAG_STATS2 515
+#define MPI_TAG_STATS3 515
 
 
 namespace Minisat {
@@ -183,7 +186,8 @@ public:
     int thisCluster;
 #ifdef COLLECT_PERF_STATS
     int histSize;
-    PerfStats* stats;
+    PerfStats* szStats;
+    PerfStats* coreStats;
 #endif
 protected:
 
@@ -212,12 +216,14 @@ protected:
     struct VarOrderLt {
         const vec<double>&  activity;
         const bool tieBreak;
+        const double fudgeFactor;
         bool operator () (Var x, Var y) const { 
             if(tieBreak) {
                 // Change here to bias individual solvers based on variable numbers.
-                if(activity[x] > activity[y]) return true;
-                else if(activity[x] < activity[y]) return false;
+                if(fudgeFactor*activity[x] > activity[y]) return true;
+                else if(activity[x] < fudgeFactor*activity[y]) return false;
                 else {
+                    numTieBreaks += 1;
                     int tieBreakX = (x%numTasks) == taskId;
                     int tieBreakY = (y%numTasks) == taskId;
                     return tieBreakX > tieBreakY;
@@ -226,9 +232,10 @@ protected:
                 return activity[x] > activity[y];
             }
         }
-        VarOrderLt(const vec<double>&  act, bool tb) 
+        VarOrderLt(const vec<double>&  act, bool tb, double fudgeFac) 
             : activity(act) 
             , tieBreak(tb)
+            , fudgeFactor(fudgeFac)
         { 
         }
     };
@@ -304,11 +311,11 @@ protected:
     void     claBumpActivity  (Clause& c);             // Increase a clause with the current 'bump' value.
 
     // Sharing.
-    void     addLearntClause  (vec<Lit>& clause);               // Add this clause to the list of learnt clauses.
-    bool     shouldExit       ();                               // Are we done?
-    void     exportClause     (vec<Lit>& clause);               // Send this out.
-    bool     importClause     (int sz, vec<Lit>& clause);       // Get a new clause.
-    void     importAllClauses ();                               // Get all new clauses.
+    void     addLearntClause  (vec<Lit>& clause, int source);               // Add this clause to the list of learnt clauses.
+    bool     shouldExit       ();                                           // Are we done?
+    void     exportClause     (vec<Lit>& clause);                           // Send this out.
+    bool     importClause     (int sz, vec<Lit>& clause, int& source);      // Get a new clause.
+    void     importAllClauses ();                                           // Get all new clauses.
 
 
     // Operations on clauses:
