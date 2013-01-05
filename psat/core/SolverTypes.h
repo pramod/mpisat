@@ -23,6 +23,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #define Minisat_SolverTypes_h
 
 #include <assert.h>
+#include <stdint.h>
 
 #include "mtl/IntTypes.h"
 #include "mtl/Alg.h"
@@ -132,6 +133,9 @@ class Clause {
         unsigned imported  : 1;
         unsigned size      : 26; 
 #endif
+#ifdef  TRACK_IMPORTED
+        int16_t source;
+#endif
     } header;
     union { Lit lit; float act; uint32_t abs; CRef rel; } data[0];
 
@@ -147,6 +151,9 @@ class Clause {
         header.size      = ps.size();
 #ifdef COLLECT_PERF_STATS
         header.imported  = 0; // not imported.
+#endif
+#ifdef TRACK_IMPORTED
+        header.source = -1;
 #endif
 
         for (int i = 0; i < ps.size(); i++) 
@@ -183,6 +190,10 @@ public:
 #ifdef COLLECT_PERF_STATS
     void         setImported (int i)         { header.imported = i; }
     bool         isImported  ()      const   { return header.imported; }
+#endif
+#ifdef TRACK_IMPORTED
+    void         setImportSource (int i)     { header.source = i; }
+    int16_t      getImportSource() const     { return header.source; }
 #endif
 
     // NOTE: somewhat unsafe to change the clause in-place! Must manually call 'calcAbstraction' afterwards for
