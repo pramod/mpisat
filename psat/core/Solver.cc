@@ -24,6 +24,9 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include "mtl/Sort.h"
 #include "core/Solver.h"
 
+#include <iostream>
+#include <iterator>
+
 //=================================================================================================
 // Globals:
 int numTasks;
@@ -90,6 +93,8 @@ static BoolOption    opt_bump_imported     (_cat, "bump-imported",      "Bump ac
 static IntOption     opt_cluster_size      (_cat, "cluster-size",       "Size of each cluster (default=0: no clustering).", 0);
 static IntOption     opt_max_shareout_size (_cat, "max-shareout-size",  "Maximum size of clauses shared outside the cluster (default=4).", 4);
 static DoubleOption  opt_activity_ff       (_cat, "activity-ff",        "Fudge factor to use when comparing activities (default=1.0; no fudging).", 1.0);
+static IntOption     opt_share_act_vars    (_cat, "share-act-vars",     "Number of active variables to share. (default=0; no sharing)", 0);
+static IntOption     opt_freq_th           (_cat, "freq-th",            "Frequency threshold when sharing active vars (default=2).", 2);
 
 
 //=================================================================================================
@@ -168,17 +173,164 @@ Solver::Solver() :
         clusterEnd      = numTasks;
         thisCluster     = 0;
     }
+
+    varsToShare = opt_share_act_vars;
+    if(varsToShare) {
+        activeVars.resize(varsToShare*numTasks, -1);
+        commonVars = new int [varsToShare*numTasks];
+        activeVarsValid.resize(numTasks, false);
+        varArray = new int[varsToShare*numTasks];
+        coreToSend = 0;
+        if(coreToSend == taskId) incrTaskId(coreToSend);
+    } else {
+        commonVars = NULL;
+        varArray = NULL;
+    }
 }
 
 
 Solver::~Solver()
 {
+    if(commonVars) delete [] commonVars;
+    if(varArray) delete [] varArray;
+
 #ifdef COLLECT_PERF_STATS
     delete [] szStats;
     delete [] coreStats;
 #endif
 }
 
+//=================================================================================================
+// Methods that handle the broadcasted version of active vars.
+
+// Update the local array if data is received.
+void Solver::updateActiveVars(int* vars, int core)
+{
+    assert(core < numTasks);
+    std::vector<int>::iterator start = activeVars.begin() + (core*varsToShare);
+    std::copy(vars, vars+varsToShare, start);
+    activeVarsValid[core] = true;
+}
+
+// Compute the most common varaibles in the array.
+void Solver::computeMostCommonVars()
+{
+    std::map<int, int> counts;
+    for(unsigned i=0; i != activeVars.size(); i++) {
+        int var = activeVars[i];
+        if(var >= 0) {
+            counts[var] += 1;
+        }
+    }
+
+    unsigned pos = 0;
+    for(std::map<int, int>::iterator it = counts.begin(); it != counts.end(); it++) {
+        if(it->second >= opt_freq_th) {
+            assert((int)pos < (numTasks*varsToShare));
+            commonVars[pos] = it->first;
+            pos += 1;
+        }
+    }
+    numCommonVars = pos;
+}
+
+bool Solver::allActiveVarsValid() const
+{
+    for(unsigned i=0; i != activeVarsValid.size(); i++) {
+        if((int)i != taskId && !activeVarsValid[i]) return false;
+    }
+    return true;
+}
+
+void Solver::resetActiveVarsValid()
+{
+    std::fill(activeVarsValid.begin(), activeVarsValid.end(), false);
+}
+
+void Solver::sendActivities()
+{
+    if(varsToShare == 0) return;
+    if(varsToShare > nVars()) { varsToShare = nVars(); }
+
+    // ignore in the beginning.
+    if(order_heap.size() < varsToShare) return;
+
+    // send the data.
+    for(int i = 0; i != varsToShare; i++) { varArray[i] = order_heap[i]; }
+    MPI_Send(varArray, varsToShare, MPI_INT, coreToSend, MPI_VAR_TAG1, MPI_COMM_WORLD);
+
+    // update the next core that will do this crap next time.
+    incrTaskId(coreToSend);
+    if(coreToSend == taskId) { incrTaskId(coreToSend); }
+}
+
+void Solver::receiveActivities()
+{
+    if(varsToShare == 0) return;
+    if(varsToShare > nVars()) { varsToShare = nVars(); }
+
+    while(1) {
+        int pending = 0;
+        MPI_Status status;
+        MPI_Iprobe(MPI_ANY_SOURCE, MPI_VAR_TAG1, MPI_COMM_WORLD, &pending, &status);
+        if(!pending) break;
+        else {
+            MPI_Recv(varArray, varsToShare, MPI_INT, MPI_ANY_SOURCE, MPI_VAR_TAG1, MPI_COMM_WORLD, &status);
+            int src = status.MPI_SOURCE;
+            updateActiveVars(varArray, src);
+        }
+    }
+    while(1) {
+        int pending =0 ;
+        MPI_Status status;
+        MPI_Iprobe(MPI_ANY_SOURCE, MPI_VAR_TAG2, MPI_COMM_WORLD, &pending, &status);
+        if(!pending) break;
+        else {
+            int numVars;
+            MPI_Recv(&numVars, 1, MPI_INT, MPI_ANY_SOURCE, MPI_VAR_TAG2, MPI_COMM_WORLD, &status);
+            assert(numVars < (varsToShare*numTasks));
+            MPI_Recv(varArray, numVars, MPI_INT, status.MPI_SOURCE, MPI_VAR_TAG3, MPI_COMM_WORLD, &status);
+
+            bumpVars(varArray, numVars);
+        }
+    }
+    if(allActiveVarsValid()) {
+        computeMostCommonVars();
+        if(numCommonVars > 0) {
+            assert((int)numCommonVars < (varsToShare*numTasks));
+            for(int i=0; i != numTasks; i++) {
+                if(i == taskId) {
+                    bumpVars(commonVars, numCommonVars);
+                } else {
+                    MPI_Send(&numCommonVars, 1, MPI_INT, i, MPI_VAR_TAG2, MPI_COMM_WORLD);
+                    MPI_Send(commonVars, numCommonVars, MPI_INT, i, MPI_VAR_TAG3, MPI_COMM_WORLD);
+                }
+            }
+        }
+        resetActiveVarsValid();
+    }
+}
+
+void Solver::bumpVars(int* vars, int cnt)
+{
+    assert(cnt < nVars());
+    assert(cnt < order_heap.size());
+
+    for(int i=0; i != cnt; i++) {
+        assert(vars[i] < nVars());
+        assert(vars[i] >= 0);
+        assert(vars[i] < activity.size());
+        double org_i = activity[order_heap[i]];
+        double new_i = activity[vars[i]];
+        if(new_i >= org_i) continue;
+        else {
+            assert(vars[i] < nVars());
+            double delta = (org_i - new_i) * 1.1;
+            assert(delta >= 0);
+            varBumpActivity(vars[i], delta);
+        }
+    }
+}
 
 //=================================================================================================
 // Minor methods:
@@ -687,6 +839,24 @@ bool Solver::simplify()
     return true;
 }
 
+/*_________________________________________________________________________________________________
+| 
+| dumpActiveVars (n : int) 
+|
+| Description:
+|   Prints out the n most "active" variables of the solver.
+|
+|________________________________________________________________________________________________@*/
+void Solver::dumpActiveVars(int n)
+{
+    assert(n <= order_heap.size());
+    printf("proc<%3d>: ", taskId);
+    for(int i=0; i != n; i++) {
+        printf("%8d", order_heap[i]);
+    }
+    printf("\n");
+}
+
 
 /*_________________________________________________________________________________________________
 |
@@ -709,9 +879,12 @@ lbool Solver::search(int nof_conflicts)
     vec<Lit>    learnt_clause;
     starts++;
 
+    sendActivities();
+
     for (;;){
         if(shouldExit()) { return l_Undef; }
         importAllClauses();
+        receiveActivities();
 
         CRef confl = propagate();
         if (confl != CRef_Undef){
