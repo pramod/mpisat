@@ -8,10 +8,11 @@ do
     let "cnt=cnt+1"
     for n in 4 8 12;
     do
-        mpirun -np $n ./minisat -cpu-lim=1200 -activity-ff=1     benchmarks/sr2008/$i >& benchmarks/sr2008/$i.psatv3.n$n.aff1
-        mpirun -np $n ./minisat -cpu-lim=1200 -activity-ff=0.999 benchmarks/sr2008/$i >& benchmarks/sr2008/$i.psatv3.n$n.aff999
-        mpirun -np $n ./minisat -cpu-lim=1200 -activity-ff=0.99  benchmarks/sr2008/$i >& benchmarks/sr2008/$i.psatv3.n$n.aff99
-        mpirun -np $n ./minisat -cpu-lim=1200 -activity-ff=0.95  benchmarks/sr2008/$i >& benchmarks/sr2008/$i.psatv3.n$n.aff95
-        mpirun -np $n ./minisat -cpu-lim=1200 -activity-ff=0.9   benchmarks/sr2008/$i >& benchmarks/sr2008/$i.psatv3.n$n.aff9
+        for j in 16 256 1024;
+        do
+            mpirun -np $n ./minisat -cpu-lim=1200 -share-act-vars=$j -freq-th=2 benchmarks/sr2008/$i >& benchmarks/sr2008/$i.psatv3.n$n.sav.$j.f2
+            mpirun -np $n ./minisat -cpu-lim=1200 -share-act-vars=$j -freq-th=3 benchmarks/sr2008/$i >& benchmarks/sr2008/$i.psatv3.n$n.sav.$j.f3
+            mpirun -np $n ./minisat -cpu-lim=1200 -share-act-vars=$j -freq-th=4 benchmarks/sr2008/$i >& benchmarks/sr2008/$i.psatv3.n$n.sav.$j.f4
+        done
     done
 done

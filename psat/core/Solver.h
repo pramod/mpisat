@@ -27,6 +27,9 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include "utils/Options.h"
 #include "core/SolverTypes.h"
 
+#include <vector>
+#include <map>
+
 extern int numTasks;
 extern int taskId;
 extern int taskKilled;
@@ -34,6 +37,11 @@ extern int numTieBreaks;
 
 // CONSTANTS
 #define MPI_CLAUSE_TAG(i) (16+i)    // the tag for clauses of size i.
+
+#define MPI_VAR_TAG1 256            // send the most common vars to a reducer.
+#define MPI_VAR_TAG2 257            // send the # of common vars from the reducer.
+#define MPI_VAR_TAG3 258            // send the vars themselves from the reducer.
+
 #define MPI_TAG_DONE 513            // some random number that doesn't interfere with other tags.
 #define MPI_TAG_STATS 514
 #define MPI_TAG_STATS2 515
@@ -184,6 +192,19 @@ public:
     int clusterSize;
     int numClusters;
     int thisCluster;
+
+    // -- VAR ACTIVITY SHARING --
+    int varsToShare;
+    std::vector<int> activeVars;
+
+    int* commonVars;
+    unsigned numCommonVars;
+
+    int *varArray;
+    std::vector<bool> activeVarsValid;
+
+    int coreToSend;
+
 #ifdef COLLECT_PERF_STATS
     int histSize;
     PerfStats* szStats;
@@ -216,12 +237,22 @@ protected:
     struct VarOrderLt {
         const vec<double>&  activity;
         const bool tieBreak;
+        const bool fudging;
         const double fudgeFactor;
         bool operator () (Var x, Var y) const { 
-            if(tieBreak) {
+            if(tieBreak && fudging) {
                 // Change here to bias individual solvers based on variable numbers.
                 if(fudgeFactor*activity[x] > activity[y]) return true;
                 else if(activity[x] < fudgeFactor*activity[y]) return false;
+                else {
+                    numTieBreaks += 1;
+                    int tieBreakX = (x%numTasks) == taskId;
+                    int tieBreakY = (y%numTasks) == taskId;
+                    return tieBreakX > tieBreakY;
+                }
+            } else if(tieBreak) {
+                if(activity[x] > activity[y]) return true;
+                else if(activity[x] < activity[y]) return false;
                 else {
                     numTieBreaks += 1;
                     int tieBreakX = (x%numTasks) == taskId;
@@ -235,6 +266,7 @@ protected:
         VarOrderLt(const vec<double>&  act, bool tb, double fudgeFac) 
             : activity(act) 
             , tieBreak(tb)
+            , fudging(fudgeFac != 1.0)
             , fudgeFactor(fudgeFac)
         { 
         }
@@ -302,6 +334,10 @@ protected:
     void     removeSatisfied  (vec<CRef>& cs);                                         // Shrink 'cs' to contain only non-satisfied clauses.
     void     rebuildOrderHeap ();
 
+
+    // New methods added.
+    void     dumpActiveVars   (int n);                                                // Dump the 'n' most active variables.
+
     // Maintaining Variable/Clause activity:
     //
     void     varDecayActivity ();                      // Decay all variables with the specified factor. Implemented by increasing the 'bump' value instead.
@@ -350,8 +386,21 @@ protected:
     // Returns a random integer 0 <= x < size. Seed must never be 0.
     static inline int irand(double& seed, int size) {
         return (int)(drand(seed) * size); }
+
+    // This business of broadcasting, computing and using active vars is handled in these methods.
+    void updateActiveVars(int* vars, int core);
+    void computeMostCommonVars();
+    bool allActiveVarsValid() const;
+    void resetActiveVarsValid();
+    void sendActivities();
+    void receiveActivities();
+    void bumpVars(int* vars, int cnt);
 };
 
+inline void incrTaskId(int& id) {
+    id = id + 1;
+    if(id >= numTasks) id = 0;
+}
 
 //=================================================================================================
 // Implementation of inline methods:
