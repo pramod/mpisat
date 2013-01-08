@@ -1,34 +1,7 @@
 import sys
 import itertools
 
-SAT         = 0
-UNSAT       = 1
-TIMEOUT     = 2
-
-STATUS_STRINGS = [ "SAT", "UNSAT", "TIMEOUT" ]
-
-def get_status(filename):
-    status = -1
-    lines = open(filename, 'rt').read().split('\n')
-    for l in lines:
-        if l.strip() == 'SATISFIABLE':
-            status = SAT
-            break
-        elif l.strip() == 'UNSATISFIABLE':
-            status = UNSAT
-            break
-        elif l.strip() == 'INDETERMINATE':
-            status = TIMEOUT
-            break
-    assert status != -1, filename
-
-    time = -1
-    for l in lines:
-        if l.strip().startswith('CPU time'):
-            words = l.split()
-            time = float(words[3])
-    assert time != -1, filename
-    return status, time
+from get_status import get_status, SAT, UNSAT, TIMEOUT, STATUS_STRINGS
 
 def compare(filename, suffixes):
     stats = []
@@ -74,3 +47,4 @@ def compare_all(filelist, suffixes):
     print (' '*40) + (' '.join([('%6.1f' % ti) for ti in n]))
 
 compare_all(sys.argv[1], sys.argv[2:])
+# get_status(sys.argv[1])
