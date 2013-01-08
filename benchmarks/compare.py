@@ -1,3 +1,6 @@
+# command line(s) used:
+# python ../compare.py good.list .minisat.out .manysat{1,2,4,8}.out .psat{1,2,4,8}.out
+
 import sys
 import itertools
 
