@@ -81,6 +81,7 @@ def plot_all(filename, suffixes):
 
     ax.set_ylabel('Speedup over Minisat 2.2', size='large')
     ax.set_xlabel('Number of cores', size='large')
+    ax.grid(True)
 
     plt.savefig('speedup1.pdf')
     plt.show()

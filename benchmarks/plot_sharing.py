@@ -80,6 +80,7 @@ def plot_sharing(filename, suffixes):
     ax.set_xticklabels(['n=2', 'n=4', 'n=8'], size='x-large')
     ax.set_ylabel('Speedup over Minisat 2.2', size='x-large')
     ax.set_xlabel('Number of cores.', size='x-large')
+    ax.grid(True)
 
     plt.savefig('mcs.pdf')
     plt.show()
