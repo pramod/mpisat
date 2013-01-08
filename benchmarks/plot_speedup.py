@@ -84,6 +84,5 @@ def plot_all(filename, suffixes):
     ax.grid(True)
 
     plt.savefig('speedup1.pdf')
-    plt.show()
 
 plot_all(sys.argv[1], sys.argv[2:])

@@ -1,3 +1,6 @@
+# command line for sharing.
+#  python ../plot_sharing.py good.list .minisat.out .psat{2,4,8}_mcs{8,16,32,64}.out
+
 import sys
 import itertools
 
@@ -83,6 +86,5 @@ def plot_sharing(filename, suffixes):
     ax.grid(True)
 
     plt.savefig('mcs.pdf')
-    plt.show()
 
 plot_sharing(sys.argv[1], sys.argv[2:])
