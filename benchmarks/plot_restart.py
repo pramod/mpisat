@@ -115,7 +115,7 @@ def plot_all(filename, suffixes):
 
     ax.set_ylim((0,3.5))
 
-    ax.legend((r1[0], r2[0], r3[0]), ('restart factor=100', 'restart factor=50', 'restart factor=mixed (100/50)'), loc='best')
+    ax.legend((r1[0], r2[0], r3[0]), ('base restart interval=100', 'base restart interval=50', 'base restart interval=mixed (100/50)'), loc='best')
     ax.set_xticks([0.5, 1.5, 2.5])
     ax.set_xticklabels(['n=2', 'n=4', 'n=8'], size='large')
 
