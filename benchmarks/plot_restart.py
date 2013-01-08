@@ -1,3 +1,6 @@
+# command line used:
+# python ../plot_restart.py good.list .minisat.out .psat_stats_{2,4,8}_r{100,50,m100}.out
+
 import sys
 import itertools
 
