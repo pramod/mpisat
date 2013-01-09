@@ -4,7 +4,9 @@ INSTRUCTIONS
 
 1. Compiling:
 
-$ cd psat/core
+$ cd psat/
+$ export MROOT=`pwd`
+$ cd core
 $ make
 
 2. Running:
