@@ -121,34 +121,36 @@ Conflict-driven clause learning (CDCL) was first proposed by the
 GRASP~\cite{GRASP} solver. The key idea behind CDCL is that each time the
 solver finds a part of search space that is unsatisfiable, it analyzes this
 ``conflict'' to learn a new clause. Keeping track of the \emph{learned clauses}
-helps the solver from exploring the same ``dead-ends'' over and over again.
+helps the solver not explore the same ``dead-ends'' over and over again.
 
 \subsubsection{Modern Solvers: Chaff and MiniSat} 
 Chaff~\cite{CHAFF} improves upon GRASP using two techniques.  The first is a
-data structure that enables efficient traversal of the clause database which is
-required for unit propagation known as \textbf{Two-literal watching}.
+data structure that enables efficient traversal of the clause database when
+performing unit propagation known as \textbf{two-literal watching}.
+
 Two-literal watching maintains the invariant that two unassigned variables are
 watched in every clause. In other words, when a literal is assigned to, it is
 removed from the watchlist and replaced with an unwatched literal. When no
 unwatched literal can be found, it means the clause is eligible for unit
 propagation. The key advantage of two-literal watching is that it enables
-efficient unit propagation without requiring traversal of the entire clause
-database.
+efficient unit propagation without forcing the solver to traverse the entire
+clause database.
 
 The decision heuristic in a SAT solver determines which variable is to be
 assigned to (``branched'' on) next.  \textbf{Variable State Independent
 Decaying Sum (VSIDS)} was a decision heuristic instroduced by Chaff which tends
 to make the SAT solver explore variables that were recently involved in
-conflicts. VSIDS keeps track of an ``activity factor'' metric that is measure
+conflicts. VSIDS keeps track of an ``activity factor'' metric that is a measure
 of the number of recent conflicts a variable has been involved in.  The
 intuition behind the metric is that it improves ``search space locality'' as
 variables recently involved in conflicts are more likely to be chosen by the
 decision heuristic.  This in turn improves overall performance by helping the
 solver ``close-out'' large regions of the search space.
 
-One of the main improvements that MiniSat~\cite{MiniSat} made on Chaff was
-to exploit input pre-processing. We use MiniSat version 2.2 as the
-baseline for our work.
+One of the main improvements that MiniSat~\cite{MiniSat} made on Chaff was to
+exploit input pre-processing and simplification. MiniSat has won a number of
+the ``SAT-Race'' competitions and we use MiniSat version 2.2 as the baseline
+for our work.
 
 \subsubsection{Stochastic Local Search Algorithm}
 Another popular approach is to apply local search in the space of possible
@@ -210,7 +212,7 @@ of the search space again.
 One important design decision here is deciding which clauses are to be shared
 with the other processes. As our results will show, sharing everything is not
 feasible because the communication overhead outweighs any performance benefits
-this may result in. Hammadi et al. \cite{Hammadi} suggest sharing clauses which
+this may result in. Hamadi et al.~\cite{Hamadi} suggest sharing clauses which
 contain no more than a certain number of literals. The intuition here is that
 short clauses are more ``general'', while long clause are more ``specific''.
 Hence, sharing short clauses is likely to be useful to processes regardless of
@@ -270,10 +272,10 @@ have differing activity factors, the variable with higher activity is chosen.
                         minimum height=8mm,minimum width=40mm, rounded corners=7]
     \begin{center}
     \begin{tikzpicture}
-        \node[box] (c0) at (0,0) {\small{core 0}};
-        \node[box] (c1) at (2,0) {\small{core 1}};
-        \node[box] (c2) at (4,0) {\small{core 2}};
-        \node[box] (c3) at (6,0) {\small{core 3}};
+        \node[box] (c0) at (0,0) {\small{process 0}};
+        \node[box] (c1) at (2,0) {\small{process 1}};
+        \node[box] (c2) at (4,0) {\small{process 2}};
+        \node[box] (c3) at (6,0) {\small{process 3}};
         \node[bigbox] (ic0) at (3,1.5) {\small{broadcast interconnect}};
         \draw[<->, thick] (c0.north) -- (ic0.210);
         \draw[<->, thick] (c1.north) -- (ic0.240);
@@ -308,14 +310,14 @@ in this preliminary report.
                         minimum height=8mm,minimum width=40mm, rounded corners=7]
     \begin{center}
     \begin{tikzpicture}
-        \node[box] (c0) at (0,0) {\small{core 0}};
-        \node[box] (c1) at (2,0) {\small{core 1}};
-        \node[box] (c2) at (4,0) {\small{core 2}};
-        \node[box] (c3) at (6,0) {\small{core 3}};
-        \node[box] (c4) at (8,0) {\small{core 4}};
-        \node[box] (c5) at (10,0) {\small{core 5}};
-        \node[box] (c6) at (12,0) {\small{core 6}};
-        \node[box] (c7) at (14,0) {\small{core 7}};
+        \node[box] (c0) at (0,0) {\small{process 0}};
+        \node[box] (c1) at (2,0) {\small{process 1}};
+        \node[box] (c2) at (4,0) {\small{process 2}};
+        \node[box] (c3) at (6,0) {\small{process 3}};
+        \node[box] (c4) at (8,0) {\small{process 4}};
+        \node[box] (c5) at (10,0) {\small{process 5}};
+        \node[box] (c6) at (12,0) {\small{process 6}};
+        \node[box] (c7) at (14,0) {\small{process 7}};
         \node[bigbox] (ic0) at (3,1.5) {\small{cluster interconnect}};
         \node[bigbox] (ic1) at (11,1.5) {\small{cluster interconnect}};
         \node[bigbox] (ic2) at (7,3.0) {\small{global interconnect}};
@@ -361,14 +363,15 @@ intend to present full results in the standard SAT-Race format (time limit of
 15 minutes) for the final submission of this report.
 
 Fourteen among the chosen 25 problems are satisfiable while the remaining
-eleven are unsatisfiable.
+eleven are unsatisfiable. The comparison with ManySAT uses ManySAT version 2.0
+obtained from~\cite{ManySATWeb}.  The default command-line and default
+parameter settings were used when executing ManySAT.
+
 
 Experiments were performed on an 8-core Intel\textregistered
-~Xeon\textregistered ~E31230 CPU clocked at 3.20GHz with 32 GB of RAM. The
-comparison with ManySAT uses ManySAT version 2.0 obtained
-from~\cite{ManySATWeb}.  The default command-line and default parameter
-settings were used when executing ManySAT.
-
+~Xeon\textregistered ~E31230 CPU clocked at 3.20GHz with 32 GB of RAM (machine 1)
+and a 24-core Intel\textregistered~Xeon ~E5645 CPU clocked at 2.40 GHz with
+132GB of RAM (machine 2). 
 
 \subsection{Speedup}
 \label{sec:speedup}
@@ -381,48 +384,57 @@ settings were used when executing ManySAT.
         \hline
         & $n=1$ & $n=2$ & $n=4$ & $n=8$ & $n=1$ & $n=2$ & $n=4$ & $n=8$ \\
         \hline
-        ibm-2004-29-k25                          &    1.0 &    0.7 &    0.7 &    0.3 &    1.0 &    1.1 &    2.5 &    2.9 \\
-        ibm-2004-1\_11-k80                       &    1.0 &    0.3 &    0.2 &    0.1 &    1.0 &    0.7 &    0.8 &    1.1 \\
-        ibm-2002-20r-k75                         &    1.0 &    0.6 &    0.5 &    0.1 &    1.0 &    1.1 &    2.6 &    1.7 \\
-        simon-s02b-r4b1k1.2                      &    1.0 &    1.7 &    1.2 &    5.9 &    1.0 &   25.7 &   22.6 &    3.3 \\
-        velev-npe-1.0-9dlx-b71                   &    1.0 &    0.2 &    0.2 &    0.1 &    1.0 &    3.7 &    1.7 &    1.6 \\
-        schup-l2s-motst-2-k315                   &    1.0 &    0.4 &    0.3 &    0.2 &    1.0 &    0.5 &    1.1 &    0.8 \\
-        goldb-heqc-alu4mul                       &    1.0 &    1.0 &    0.7 &    0.3 &    1.0 &    1.9 &    3.3 &    3.0 \\
-        jarvi-eq-atree-9                         &    1.1 &    0.8 &    0.7 &    0.9 &    1.0 &    1.2 &    2.5 &    2.0 \\
-        ibm-2002-22r-k80                         &    1.0 &    0.3 &    0.6 &    0.1 &    1.0 &    0.5 &    1.0 &    1.8 \\
-        simon-s03-fifo8-400                      &    1.0 &    0.9 &    0.4 &    0.2 &    1.0 &    1.8 &    1.9 &    2.2 \\
-        ibm-2002-24r3-k100                       &    1.0 &    1.0 &    0.5 &    0.3 &    1.0 &    1.8 &    2.3 &    3.0 \\
-        mizh-sha0-36-4                           &    1.0 &    1.2 &    1.0 &    0.4 &    1.0 &    0.2 &    0.8 &    0.6 \\
-        manol-pipe-f7nidw                        &    1.0 &    0.9 &    0.6 &    0.2 &    1.0 &    1.6 &    2.3 &    2.4 \\
-        manol-pipe-c6bidw\_i                     &    1.0 &    0.6 &    0.4 &    0.2 &    1.0 &    1.5 &    1.6 &    2.0 \\
-        mizh-md5-47-3                            &    1.0 &    0.3 &    0.3 &    0.2 &    1.0 &    1.4 &    2.3 &    5.6 \\
-        ibm-2004-23-k80                          &    1.0 &    0.5 &    0.2 &    0.1 &    1.0 &    0.7 &    1.1 &    3.5 \\
-        mizh-md5-48-2                            &    1.0 &    0.1 &    0.1 &    0.1 &    1.0 &    1.4 &    2.2 &    5.9 \\
-        ibm-2002-22r-k75                         &    1.0 &    0.5 &    0.4 &    0.2 &    1.0 &    1.8 &    1.9 &    2.0 \\
-        manol-pipe-g10nid                        &    1.0 &    0.7 &    0.4 &    0.2 &    1.0 &    1.3 &    1.8 &    1.6 \\
-        fuhs-aprove-16                           &    1.0 &    0.4 &    0.3 &    0.2 &    1.0 &    1.0 &    1.7 &    1.7 \\
-        post-c32s-col400-16                      &    1.0 &    0.6 &    0.4 &    0.3 &    1.0 &    1.5 &    2.1 &    2.3 \\
-        anbul-dated-5-15-u                       &    1.0 &    0.9 &    0.6 &    0.3 &    1.0 &    2.0 &    2.0 &    1.7 \\
-        mizh-sha0-35-4                           &    1.0 &    1.7 &    0.6 &    0.4 &    1.0 &    5.9 &    1.6 &    9.0 \\
-        ibm-2004-29-k55                          &    1.0 &    7.1 &    5.0 &    1.9 &    1.0 &   21.5 &  164.3 &   59.2 \\
-        mizh-sha0-36-1                           &    1.0 &    0.3 &    0.3 &    0.5 &    1.0 &    0.6 &   11.2 &   14.6 \\
+        ibm-2004-29-k25                    &       1.0 &  1.5 &  2.8 &  2.4 &  1.0 &  1.1 &  2.5 &  2.9 \\
+        ibm-2004-1\_11-k80                 &       1.0 &  0.6 &  0.9 &  0.8 &  1.0 &  0.7 &  0.8 &  1.1 \\
+        ibm-2002-20r-k75                   &       1.0 &  1.3 &  1.9 &  0.8 &  1.0 &  1.1 &  2.6 &  1.7 \\
+        simon-s02b-r4b1k1.2                &       1.0 &  3.4 &  4.7 & 47.6 &  1.0 & 25.7 & 22.6 &  3.3 \\
+        velev-npe-1.0-9dlx-b71             &       1.0 &  0.4 &  1.0 &  0.6 &  1.0 &  3.7 &  1.7 &  1.6 \\
+        schup-l2s-motst-2-k315             &       1.0 &  0.8 &  1.0 &  1.2 &  1.0 &  0.5 &  1.1 &  0.8 \\
+        goldb-heqc-alu4mul                 &       1.0 &  2.1 &  2.6 &  2.7 &  1.0 &  1.9 &  3.3 &  3.0 \\
+        jarvi-eq-atree-9                   &       1.1 &  1.6 &  2.6 &  6.9 &  1.0 &  1.2 &  2.5 &  2.0 \\
+        ibm-2002-22r-k80                   &       1.0 &  0.7 &  2.4 &  0.9 &  1.0 &  0.5 &  1.0 &  1.8 \\
+        simon-s03-fifo8-400                &       1.0 &  1.7 &  1.7 &  1.8 &  1.0 &  1.8 &  1.9 &  2.2 \\
+        ibm-2002-24r3-k100                 &       1.0 &  2.0 &  2.2 &  2.5 &  1.0 &  1.8 &  2.3 &  3.0 \\
+        mizh-sha0-36-4                     &       1.0 &  2.4 &  3.9 &  3.2 &  1.0 &  0.2 &  0.8 &  0.6 \\
+        manol-pipe-f7nidw                  &       1.0 &  1.8 &  2.4 &  1.9 &  1.0 &  1.6 &  2.3 &  2.4 \\
+        manol-pipe-c6bidw\_i               &       1.0 &  1.1 &  1.8 &  1.6 &  1.0 &  1.5 &  1.6 &  2.0 \\
+        mizh-md5-47-3                      &       1.0 &  0.6 &  1.3 &  1.7 &  1.0 &  1.4 &  2.3 &  5.6 \\
+        ibm-2004-23-k80                    &       1.0 &  0.9 &  0.7 &  1.0 &  1.0 &  0.7 &  1.1 &  3.5 \\
+        mizh-md5-48-2                      &       1.0 &  0.2 &  0.3 &  0.9 &  1.0 &  1.4 &  2.2 &  5.9 \\
+        ibm-2002-22r-k75                   &       1.0 &  1.0 &  1.8 &  1.8 &  1.0 &  1.8 &  1.9 &  2.0 \\
+        manol-pipe-g10nid                  &       1.0 &  1.4 &  1.8 &  1.5 &  1.0 &  1.3 &  1.8 &  1.6 \\
+        fuhs-aprove-16                     &       1.0 &  0.8 &  1.3 &  1.4 &  1.0 &  1.0 &  1.7 &  1.7 \\
+        post-c32s-col400-16                &       1.0 &  1.2 &  1.7 &  2.2 &  1.0 &  1.5 &  2.1 &  2.3 \\
+        anbul-dated-5-15-u                 &       1.0 &  1.9 &  2.5 &  2.3 &  1.0 &  2.0 &  2.0 &  1.7 \\
+        mizh-sha0-35-4                     &       1.0 &  3.3 &  2.3 &  3.1 &  1.0 &  5.9 &  1.6 &  9.0 \\
+        ibm-2004-29-k55                    &       1.0 & 14.1 & 20.0 & 15.2 &  1.0 & 21.5 &164.3 & 59.2 \\
+        mizh-sha0-36-1                     &       1.0 &  0.6 &  1.0 &  3.9 &  1.0 &  0.6 & 11.2 & 14.6 \\
+        \hline
+        \textbf{total}                     &       1.0 &  1.0 &  1.5 &  1.8 &  1.0 &  1.1 &  2.0 &  2.3 \\
         \hline
     \end{tabular}
     \end{center}
-    \caption{Speedup of parallel SAT solvers as $n$ (number of cores) is
-    varied. Speedup is computed using MiniSat 2.2 as the baseline. }
+    \caption{Speedup of parallel SAT solvers on machine 1 as $n$ (number of
+    cores) is varied. Speedup is computed using MiniSat 2.2 as the baseline. }
     \label{tab:speedup}
 \end{table*}
+
 Table \ref{tab:speedup} shows the speedup of the ManySAT 2.0 and our
 implementation for the 25 selected benchmarks. Speedups are shown for 1, 2, 4
-and 8 cores. Somewhat surprisingly, ManySAT 2.0 does not show significant
-speedup for most of the benchmarks. We are trying to understand why this
-is the case.
+and 8 cores running on machine 1.  Our implementation shows significant speedup
+($>2X$) when using 4 cores and slightly more than that for 8 cores. Since
+learnt clauses are broadcast to all the other cores, it would seem that
+communication overheard for 8 cores outweighs the sharing benefit. 
 
-Our implementation shows significant speedup ($>2X$) when using 4 cores and
-slightly more than that for 8 cores. Since learnt clauses are broadcast
-to all the other cores, it would seem that communication overheard for 8
-cores outweighs the sharing benefit.
+We note that super-linear speedups are possible and observed in a number of
+benchmarks.  Since SAT-solving is essentially a heuristic search, combining
+information from multiple processes can help the solver ``close out'' large
+regions of the search space much faster than would have been possible with a
+sequential search. It is not necessary that the sizes of ``closed out'' regions
+is linearly proportional to the number of cores. We also not that co-operation
+can be detrimental because of the interaction between the shared clauses and
+the decision heuristic.  This can can result in the solver ``wasting time'' by
+exploring parts of the search space that do not contain the solution.
 
 \begin{figure}[htbp]
     \begin{center}
@@ -438,7 +450,63 @@ speedup compared to MiniSat 2.2 baseline for the time taken to solve all 25
 problems by the two parallel solvers. It can be seen that the MPI-based
 parallel solver gets only slightly faster when going from 1 to 2 cores. Going
 from 2 to 4 cores produces significant speedup but speedup is already tapering
-off at 8 cores.
+off at 8 cores. The MPI-based parallel solver out-performs ManySAT 2.0 by a
+small amount for both 4 and 8 cores.
+
+\subsection{Scalability}
+\label{sec:scalability}
+
+\begin{table*}[htbp]
+    \begin{center}
+    \begin{tabular}{|l|c|c|c|c|c|c|}
+        \hline
+        {\textbf{SAT Benchmark}} & \multicolumn{6}{c|}{\textbf{Number of Cores}} \\
+        \hline
+        & $n=4$ & $n=8$ & $n=12$ & $n=16$ & $n=20$ & $n=24$ \\
+        \hline
+      ibm-2004-29-k25.cnf.gz &                   3.4 &  5.3 &  6.5 &  6.9 &  6.3 &  6.2 \\
+      ibm-2004-1\_11-k80.cnf.gz &                1.8 &  1.7 &  2.3 &  2.8 &  2.2 &  2.7 \\
+      ibm-2002-20r-k75.cnf.gz &                  1.4 &  2.7 &  2.5 &  2.5 &  1.9 &  2.2 \\
+      simon-s02b-r4b1k1.2.cnf.gz &               6.6 &  3.4 &  6.3 &  7.0 & 20.4 & 13.9 \\
+      velev-npe-1.0-9dlx-b71.cnf.gz &            2.1 &  3.5 &  2.8 &  2.3 &  0.6 &  0.8 \\
+      schup-l2s-motst-2-k315.cnf.gz &            1.1 &  1.7 &  1.4 &  2.0 &  1.7 &  1.7 \\
+      goldb-heqc-alu4mul.cnf.gz &                3.6 &  5.8 &  6.2 &  6.0 &  6.4 &  6.0 \\
+      ibm-2002-22r-k80.cnf.gz &                  1.2 &  1.7 &  2.1 &  2.0 &  1.7 &  1.7 \\
+      simon-s03-fifo8-400.cnf.gz &               2.2 &  3.1 &  3.1 &  3.4 &  3.2 &  3.4 \\
+      ibm-2002-24r3-k100.cnf.gz &                3.6 &  4.3 &  4.2 &  4.4 &  5.4 &  5.0 \\
+      manol-pipe-f7nidw.cnf.gz &                 3.1 &  4.6 &  4.6 &  4.2 &  3.5 &  3.4 \\
+      manol-pipe-c6bidw\_i.cnf.gz &              2.5 &  3.2 &  3.5 &  3.5 &  3.4 &  3.2 \\
+      ibm-2004-23-k80.cnf.gz &                   0.7 &  1.3 &  1.6 &  2.0 &  1.4 &  2.5 \\
+      ibm-2002-22r-k75.cnf.gz &                  2.6 &  2.5 &  4.3 &  4.3 &  4.0 &  3.5 \\
+      manol-pipe-g10nid.cnf.gz &                 2.3 &  2.5 &  2.7 &  2.4 &  2.5 &  2.3 \\
+      fuhs-aprove-16.cnf.gz &                    1.5 &  2.3 &  2.4 &  2.4 &  2.7 &  3.0 \\
+      post-c32s-col400-16.cnf.gz   &             2.5 &  2.9 &  3.4 &  3.3 &  3.1 &  2.7 \\
+      anbul-dated-5-15-u.cnf.gz &                2.6 &  4.3 &  4.5 &  4.1 &  5.0 &  3.8 \\
+      mizh-sha0-35-4.cnf.gz &                    0.7 &  2.8 & 13.0 & 13.1 &  7.8 &  2.2 \\
+      ibm-2004-29-k55.cnf.gz &                   8.3 & 29.6 & 23.3 & 24.6 & 25.6 & 21.2 \\
+      \hline
+      \textbf{total}  &                          1.8 &  3.0 &  3.5 &  3.6 &  3.0 &  2.9 \\
+      \hline
+    \end{tabular}
+    \end{center}
+    \caption{Speedup of MPI-based Parallel Solver on machine 2. Minisat 2.2 is again
+    used as the baseline.}
+    \label{tab:scalability}
+\end{table*}
+
+To study the scalability of the MPI-based solver we used machine 2 and measured
+speedup over the MiniSAT 2.2 baseline for 4, 8, 12, 16, 20 and 24 cores. We
+found that ManySAT2.0 was crashing on some instances when running on more than
+8 cores, so we do not present the results for ManySAT in this table. We also
+found that some of the 25 instances timed out\footnote{The timeout was set to
+1000 seconds.} so results for these instances are not shown if any one of the
+experiments timed out. Leaving out these instances left us with the 20
+benchmarks shown in Table \ref{tab:scalability}. 
+
+We see from Table \ref{tab:scalability} that some performance improvements are
+seen up to 16 cores but there is a slowdown when running the program with 20
+and 24 cores. This suggests that beyond 16 cores, the overhead of communication
+and the divide-and-conquer approach outweighs the benefits of clause sharing.
 
 \subsection{Effect of Clause Sharing}
 \label{sec:sharing effects}
@@ -446,16 +514,16 @@ off at 8 cores.
 \begin{figure}[htbp]
     \begin{center}
         \includegraphics[width=\columnwidth]{images/mcs.pdf}
-        \caption{Effect of maximum shared clause size (MSCS).}
+        \caption{Effect of maximum shared clause size (MSCS) (machine 1).}
         \label{fig:mscs}
     \end{center}
 \end{figure}
 
 Figure \ref{fig:mscs} shows the effect of maximum size of shared clauses on the
-speedup. Note these results are slightly different from those shown in Figure
-\ref{fig:speedup} because of noise in the timing measurements. Although the
-trends are somewhat hard to interpret because of the noise, some observations
-that can be made are the following.
+speedup for machine 1. Note these results are slightly different from those
+shown in Figure \ref{fig:speedup} because of noise in the timing measurements.
+Although the trends are somewhat hard to interpret because of the noise, some
+observations that can be made are the following.
 
 \begin{enumerate}
 
@@ -471,7 +539,133 @@ best although there is an abberant data point for MSCS=32.
       
 \end{enumerate}
 
+\begin{figure}[htbp]
+  \begin{center}
+    \includegraphics[width=\columnwidth]{images/mcs2.pdf}
+    \caption{Effect of maximum shared clause size (MSCS) (machine 2).}
+    \label{fig:mscs2}
+  \end{center}
+\end{figure}
+
+Figure \ref{fig:mscs2} shows the impact of the maximum shared clause size on
+machine 2. This graph makes it very clear that sharing fewer clauses is
+\emph{not} beneficial for scalability because although this lesses the overhead
+of communication, it also results in processes co-operating less, hurting
+speedup. We also see that MSCS=16 is not beneficial for anything more than 16
+cores likely because of the overhead of all-to-all broadcasting of learned
+clauses.
+
+\subsection{Measuring Impact of Clause Sharing}
+
+\begin{figure*}[htbp]
+    \includegraphics[width=2\columnwidth]{images/useful.pdf}
+    \caption{Distribution of useful and useless clauses as a percentage of total
+    imported clauses vs. clause size for (left) mizh-sha0-36-4 on 2 cores and
+    (right) ibm-2004-29-k55 on 4 cores.}
+    \label{fig:useful}
+\end{figure*}
+
+
+To quantify the impact of clause sharing, we instrumented the solver to keep
+track of learnt clauses that arrived from another process and then count the
+number of such clauses that were involved in at least one conflict.  We refer
+to a learned class obtained from another process as an ``imported''
+clause.\footnote{The term ``imported'' clause is borrowed from the ManySAT
+codebase.} An imported clause that subsequently causes a conflict is called a
+``useful'' clause. Clearly, imported clauses that never get involved in a
+conflict are undesireable because they simply contribute to the communication
+overhead without aiding any of the computation.
+
+Figure \ref{fig:useful} shows the percentage of clauses and the distribution of
+their sizes for two benchmarks. The graph on the left is for
+\textit{mizh-sha0-36-4} executed on two cores which has poor speedup. The graph
+on the right is for \textit{ibm-2004-29-k55} executing on 4 cores. This has
+good speedup. \textit{mizh-sha0-36-4} shares a lot of useful short clauses but
+very few useful long clauses. For \textit{ibm-2004-29-k55}, we see that the
+distribution of the length of useful clauses is more uniform. This pattern was
+observed in a few other benchmarks with good speedup, which suggests that
+successfully sharing useful long clauses is important for performance. One
+intuitive explanation for this could be that if the processes are sharing
+useful long clauses, it means they are co-operating to a greater extent than if
+they are just sharing useful short clauses. 
+
+{The lesson here is that the parallel processes in the solver must co-operate
+as much possible while making sure they don't end up doing redundant work to
+get good performance.} Simply exploring different parts of the search space is
+unlikely to result in useful co-operation/good performance. The other big
+takeaway from the figure is that the majority of clauses are actually useless,
+which suggests that there is potential here to improve scalability by the
+design of intelligent heuristics that share only a subset of learned clauses.
+
+\subsection{Clustered Sharing Results}
+\begin{figure}[htbp]
+  \includegraphics[width=\columnwidth]{images/cluster.pdf}
+  \caption{Results of solver with clustered sharing (machine 2).}
+  \label{fig:cluster}
+\end{figure}
+
+Figure \ref{fig:cluster} shows the impact of ``clustered clause sharing''. In
+this experiment, ``clusters'' are formed containing either 4 or 8 cores. Each
+core exports all learned claused with 16 or fewer literals to all the cores in
+its cluster. However, it only exports clauses with fewer than either 4 or 8
+(labeled MCSCOut) to the cores outside the cluster. In other words, there is
+more communication within the cores in a cluster than between cores in different
+clusters.
+
+The results show that MSCSOut=8 outperforms MSCSOut=4, which again supports our
+hypothesis that effective co-operation is essential for good performance. We
+also note that all the clustered configurations are outperformed by the default
+configuration that uses all-to-all broadcast. 
+
+
+\subsection{Approximate comparison of activity factors}
+The default divide and conquer algorithm biases invidual cores towards certain
+variables only when the activity factors for the variables are exactly the same.
+
+\begin{figure}[htbp]
+  \includegraphics[width=\columnwidth]{images/aff.pdf}
+  \caption{Impact of approximate comparison of activity factors (machine 2).}
+  \label{fig:aff}
+\end{figure}
+
+Figure \ref{fig:aff} shows the impact of approximate comparison of the activity
+factors instead of exact comparison when choosing to bias the activity heuristic.
+We study tolerances range from $0.1\%$ to $10\%$ and find that exact comparison
+is actually the best option!
+
+\subsection{Impact of the Base Restart Interval}
+
+\begin{figure}[htbp]
+  \includegraphics[width=\columnwidth]{images/restart_speedup1.pdf}
+  \caption{Impact of Base Restart Interval (machine 1)}
+  \label{fig:restart}
+\end{figure}
+
+Recent work \cite{HuangRestart2007} has suggested that the restart policy in
+modern SAT-solver is a potential source of significant performance improvement.
+MiniSAT uses the Luby sequence of restarts~\cite{Luby93optimalspeedup}
+which means the solver restarts its search after $1X$, $1X$, $2X$, $1X$, $1X$,
+$2X$, $4X$, $1X$, $1X$, $2X$, $1X$, $1X$, $2X$, $4X$, $8X$, $\dots$ conflicts
+where $X$ is the base restart interval. 
+
+Figure \ref{fig:restart} shows the effect of reducing the base restart interval
+from the default value of $100$ conflicts to $50$ conflicts.\footnote{Note the
+results cannot be compared directly with those shown previously because in this
+experiment the solver was been instrumented to gather sharing statistics,
+possibly making it a little slower.} It is evident that a smaller base restart
+interval improves performance, which makes intuitive sense because the parallel
+solver ``learns faster'' than a sequential solver. 
+
+The red bar shows the performance of using a ``mixed'' base restart interval.
+Half the processes use a restart interval of 100 conflicts while the others use a
+restart interval of 50 conflicts. The intuition here was that mixed restart
+intervals would desynchronize the processes which might help performance by
+improving solver diversity. However, it appears this hurts performance more
+than it helps because of the loss of co-operation among processes.
+
 \section{Conclusion}
+\label{sec:finish}
+
 We presented a new technique for parallelization of SAT solvers based
 on message passing. Our algorithm uses the conflict-driven clause learning 
 and the popular MiniSAT as an implementation basis. Our results show that 
