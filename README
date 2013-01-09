@@ -1,0 +1,23 @@
+The MPI solver is in the psat directory.
+
+INSTRUCTIONS
+
+1. Compiling:
+
+$ cd psat/core
+$ make
+
+2. Running:
+
+Make sure the MPI daemon is running. To start it use the command: 
+
+$ mpd &
+
+Run the solver using a commandline like the following:
+
+$ mpirun -n 4 ./minisat <cnf-file>
+
+Replace 4 with the number of cores you want the solver to use.
+
+
+
