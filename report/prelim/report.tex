@@ -550,7 +550,7 @@ best although there is an abberant data point for MSCS=32.
 Figure \ref{fig:mscs2} shows the impact of the maximum shared clause size on
 machine 2. This graph makes it very clear that sharing fewer clauses is
 \emph{not} beneficial for scalability because although this lesses the overhead
-of communication, it also results in threads co-operating less, hurting
+of communication, it also results in processes co-operating less, hurting
 speedup. We also see that MSCS=16 is not beneficial for anything more than 16
 cores likely because of the overhead of all-to-all broadcasting of learned
 clauses.
@@ -597,6 +597,27 @@ takeaway from the figure is that the majority of clauses are actually useless,
 which suggests that there is potential here to improve scalability by the
 design of intelligent heuristics that share only a subset of learned clauses.
 
+\subsection{Clustered Sharing Results}
+\begin{figure}[htbp]
+  \includegraphics[width=\columnwidth]{images/cluster.pdf}
+  \caption{Results of solver with clustered sharing (machine 2).}
+  \label{fig:cluster}
+\end{figure}
+
+Figure \ref{fig:cluster} shows the impact of ``clustered clause sharing''. In
+this experiment, ``clusters'' are formed containing either 4 or 8 cores. Each
+core exports all learned claused with 16 or fewer literals to all the cores in
+its cluster. However, it only exports clauses with fewer than either 4 or 8
+(labeled MCSCOut) to the cores outside the cluster. In other words, there is
+more communication within the cores in a cluster than between cores in different
+clusters.
+
+The results show that MSCSOut=8 outperforms MSCSOut=4, which again supports our
+hypothesis that effective co-operation is essential for good performance. We
+also note that all the clustered configurations are outperformed by the default
+configuration that uses all-to-all broadcast. 
+
+
 \subsection{Impact of the Base Restart Interval}
 
 \begin{figure}[htbp]
@@ -621,11 +642,11 @@ interval improves performance, which makes intuitive sense because the parallel
 solver ``learns faster'' than a sequential solver. 
 
 The red bar shows the performance of using a ``mixed'' base restart interval.
-Half the threads use a restart interval of 100 conflicts while the others use a
+Half the processes use a restart interval of 100 conflicts while the others use a
 restart interval of 50 conflicts. The intuition here was that mixed restart
 intervals would desynchronize the processes which might help performance by
 improving solver diversity. However, it appears this hurts performance more
-than it helps because of the loss of co-operation among threads.
+than it helps because of the loss of co-operation among processes.
 
 \section{Conclusion}
 \label{sec:finish}
