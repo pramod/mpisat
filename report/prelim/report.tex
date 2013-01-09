@@ -618,11 +618,26 @@ also note that all the clustered configurations are outperformed by the default
 configuration that uses all-to-all broadcast. 
 
 
+\subsection{Approximate comparison of activity factors}
+The default divide and conquer algorithm biases invidual cores towards certain
+variables only when the activity factors for the variables are exactly the same.
+
+\begin{figure}[htbp]
+  \includegraphics[width=\columnwidth]{images/aff.pdf}
+  \caption{Impact of approximate comparison of activity factors (machine 2).}
+  \label{fig:aff}
+\end{figure}
+
+Figure \ref{fig:aff} shows the impact of approximate comparison of the activity
+factors instead of exact comparison when choosing to bias the activity heuristic.
+We study tolerances range from $0.1\%$ to $10\%$ and find that exact comparison
+is actually the best option!
+
 \subsection{Impact of the Base Restart Interval}
 
 \begin{figure}[htbp]
   \includegraphics[width=\columnwidth]{images/restart_speedup1.pdf}
-  \caption{Impact of Base Restart Interval}
+  \caption{Impact of Base Restart Interval (machine 1)}
   \label{fig:restart}
 \end{figure}
 
