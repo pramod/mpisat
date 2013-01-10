@@ -42,47 +42,50 @@ proposed in the literature that effectively solve real-world instances of the
 problem in a reasonable amount of time. 
 
 With the advent of fast modern multiprocessor systems, new directions for
-further improvement of the existing solutions arise. In this paper we present a
+further improvement of the existing solutions arise. In this paper, we present a
 parallel SAT solver algorithm based on conflict-driven clause sharing and
 message passing. We evaluate our approach on the base of the popular sequential
 MiniSAT solver and compare it with one of the most successful parallel solvers
 - ManySAT. Our experiments show that the proposed approach achieve up to 164X
-speedup. The average speedup when using four cores is about 2X.
+speedup. The average speedup when using four-core system is about 2X.
 
 \end{abstract}
 
 \section{Introduction}
 The Boolean Satisfiability Problem, usually called just the SAT problem, 
 is the task of finding an assignment of all variables of a boolean 
-formula such a way that the whole formula evaluates to a true value.
-
-The Boolean Satisfiability Problem, usually called just the SAT problem, is the
-task of finding an assignment of all variables of a boolean formula such a way
-that the whole formula evaluates to a true value.
+formula in such a way that the whole formula evaluates to a true value.
 
 The SAT problem has been thoroughly investigated and understood during the last
 several decades. A lot of work has been done in both investigating the
 theoretical properties of the problem and its practical implications. It is the
-first problem in computer science that has been classifies as NP-complete
+first problem in computer science that has been classified as NP-complete
 \cite{SATNP}. One of the reasons, because of which it is so important, is the
-fact that many natural decision and optimizations problems in different areas
-of science and engineering can be modelled as an instance of SAT. This resulted
-in extensive research in this area and a lot of progress in finding efficient
-ways to solve SAT in a reasonable amount of time. Myriad
+fact that a huge number of practical problems from various domains can be modelled
+as instances of the SAT problem. Examples include problems from hardware design and
+verification, artificial intelligence, graph theory, logistics and others. This 
+resulted in extensive research of this problem and tremendous progress in finding 
+efficient ways to solve SAT in a reasonable amount of time. Myriad sophisticated
 algorithms~\cite{CHAFF, GRASP, MiniSat,PSATO,WalkSAT,DPLL,GRADSAT,ManySAT} have
-appeared in the scientific literature for this problem and special competitions
-\cite{SATRace2008} have been organized to compare different ideas and
-implementations.  \cite{GRASP}
+appeared in the scientific literature and special competitions \cite{SATRace2008} 
+have been organized to compare different ideas and implementations.
 
-Most modern SAT solvers are entirely sequential and do not try to introduce any
-kind of parallel computation in their algorithms. The rise of new powerful
-multiprocessor architectures brings new directions in which SAT solvers can be
-improved. In this paper, we propose a new parallel algorithm for solving the
-SAT problem based on message passing techniques.
+However, most of the modern SAT solvers are entirely sequential and do not try 
+to introduce any kind of parallel computation in their algorithms. The advent 
+of new powerful multiprocessor architectures brings new directions in which SAT 
+solvers can be improved. The few existing parallel SAT solvers are based 
+mainly on shared-memory techniques. In this work, we propose a new parallel 
+algorithm that is based on message-passing.
 
+The main contributions of the paper are:
+\begin{itemize}
+\item Elaborate and precise analysis of the weaknesses of previous attempts 
+for parallization of SAT solvers.
+\item A novel parallel SAT solving algorithm based on message passing.
+\end{itemize}
 The rest of this paper is organized as follows: we review related work in
 Section \ref{sec:related}, describe our solution in more detail in Section
-\ref{sec:strategy}, present the preliminary results of in Section
+\ref{sec:strategy}, present experimental evaluation of our approach in Section
 \ref{sec:results} and conclude in Section \ref{sec:finish}.
 
 \section{Related Work}
