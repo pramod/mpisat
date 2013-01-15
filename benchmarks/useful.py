@@ -39,8 +39,8 @@ ticklabels = ['%d' % int(xi) for xi in x]
 fig = plt.figure(figsize=(16,8))
 ax1 = fig.add_subplot(121)
 
-b1 = ax1.bar(x, frac_useful1)
-b2 = ax1.bar(x, frac_useless1, color='red', bottom=frac_useful1)
+b1 = ax1.bar(x, frac_useful1, color='DarkGreen')
+b2 = ax1.bar(x, frac_useless1, color='Gray', bottom=frac_useful1)
 ax1.grid(True)
 ax1.set_ylim((0,12))
 ax1.set_xticks(ticks)
@@ -51,8 +51,8 @@ ax1.legend((b1[0], b2[0]), ('Percentage of useful clauses', 'Percentage of usele
 ax1.set_title('mizh-sha0-36-4 on 2 cores (poor scaling)')
 
 ax2 = fig.add_subplot(122)
-b1 = ax2.bar(x, frac_useful2)
-b2 = ax2.bar(x, frac_useless2, color='red', bottom=frac_useful2)
+b1 = ax2.bar(x, frac_useful2, color='DarkGreen')
+b2 = ax2.bar(x, frac_useless2, color='Gray', bottom=frac_useful2)
 ax2.grid(True)
 ax2.set_ylim((0,12))
 ax2.set_xticks(ticks)
