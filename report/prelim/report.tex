@@ -38,26 +38,24 @@
 \setcounter{page}{1}
 \pagenumbering{arabic}
 
-\begin{abstract}
-Boolean satisfiability checking (also known as SAT) is the problem of analyzing
-a Boolean formula to determine whether some assignment of variables exists that
-results in the formula evaluating to true. The problem is known to be
-NP-complete. Despite its apparent computational infeasibility, numerous
-algorithms have been proposed that solve large real-world instances of SAT in a
-reasonable amount of time. 
+\begin{abstract} Boolean satisfiability checking (also known as SAT) is the
+problem of analyzing a Boolean formula to determine whether some assignment of
+variables exists that results in the formula evaluating to true. The problem is
+known to be NP-complete. Despite its apparent computational infeasibility,
+numerous algorithms have been proposed that solve large real-world instances of
+SAT in a reasonable amount of time. 
 
 With the advent of fast modern multiprocessor systems, new directions for
 further improvement of these solvers have emerged. In this paper, we present a
 parallel SAT solver algorithm based on conflict-driven clause sharing and
 message passing. Our experiments find the average speedup of our implementation
 when using four-cores is about 2X and increases to 3.6X when using 16 cores.
-We also present an analysis of the performance of our parallel SAT solver and
+We present an analysis of the performance of our parallel SAT solver and
 identify bottlenecks inhibiting further scaling.
-
 \end{abstract}
 
 \section{Introduction}
-The Boolean Satisfiability Problem, usually called just the SAT problem, is the
+The Boolean satisfiability problem, usually called just the SAT problem, is the
 task of finding an assignment of all variables of a boolean formula such that
 the formula evaluates to true. It was the first problem in computer science to
 be classified as NP-complete~\cite{Cook1971}. A huge number of practical
@@ -78,21 +76,28 @@ real-world instances of SAT.
 
 However, most modern SAT solvers are entirely sequential and do not utilize
 parallel computation in their algorithms. The advent of multicore era has
-opened up up an opportunity for research into parallel SAT solvers and some
+opened up an opportunity for research into parallel SAT solvers and some
 parallel SAT solvers~\cite{ManySAT} have been designed for shared-memory
 machines.  In this work, we build and evaluate a parallel SAT solver based on
-message-passing. The motivation for exploring a message passing implementation
-is to enable scaling the SAT solver to a large number of cores/processes.
+message-passing. Our motivation for exploring a message passing implementation
+is to enable scaling the parallel SAT solver to a large number of
+cores/processes.
 
 The novel contributions of this paper are the design of a message passing based
 SAT solver and a thorough analysis of the parameters that affect its
-performance. We also identify bottlenecks in the solver that inhibit further
-scaling and make some comments on future work.  Our evaluation of the
-performance and scaling of our implementation finds that it achieves a
-maximum speed up of 164X over the sequential solver MiniSAT. Average speedup
-when using four cores is 2.0X and increases up to 3.6X when executing using
-16-cores. We compare our implementation with the popular ManySAT 2.0 shared
-memory parallel solver and find that it outperforms ManySAT 2.0. 
+performance. In particular we introduce a decision heuristic that efficiently
+partitions the search space amongst processes (\S\ref{sec:decheu}) and 
+a clustered form of clause sharing that attempts to trade-off communication
+cost with the benefits of sharing (\S\ref{sec:clustered sharing}). We also
+identify bottlenecks in the solver that inhibit further scaling (\S
+\ref{sec:disc}) and make some comments on future work.  
+
+Our evaluation of the performance and scaling of our implementation finds that
+it achieves a maximum speed up of 164X over the sequential solver MiniSAT.
+Average speedup when using four cores is 2.0X and increases up to 3.6X when
+executing using 16-cores. We compare our implementation with the popular
+ManySAT 2.0 shared memory parallel solver and find that it outperforms ManySAT
+2.0. 
 
 The rest of this paper is organized as follows: we review related work in
 Section \ref{sec:related}, describe our solution in more detail in Section
@@ -232,15 +237,15 @@ seed for each process and the use of a slightly modified decision heuristic
 
 At a high-level our parallelization strategy is similar to ManySAT. The
 parallel solver executes $N$ processes, each of which independently explores
-the search space. As the solver is based on CDCL, each time t runs into a
-``conflict'', it generates a learned clause. If the size of the learned clause
-from the conflict is sufficiently small it broadcasts the learned clause to all
-the other processes.  After each assignment to a variable, each process checks
-whether any learned clauses are available to be read from the other processes.
-If so, it adds these clauses to its two-literal watching data structure. To
-ensure that the different processes of the solver don't end up doing redundant
-work, we use different random seeds for each thread and bias each thread
-towards certain variables resulting in a type of divide-and-conquer
+the search space. As the solver is based on CDCL, each time a solver runs into
+a ``conflict'', it generates a learned clause. If the size of the learned
+clause from the conflict is sufficiently small it broadcasts the learned clause
+to all the other processes.  After each assignment to a variable, each process
+checks whether any learned clauses are available to be read from the other
+processes.  If so, it adds these clauses to its two-literal watching data
+structure. To ensure that the different processes of the solver don't end up
+doing redundant work, we use different random seeds for each thread and bias
+each thread towards certain variables resulting in a type of divide-and-conquer
 partitioning while exploring the search space.
 
 The main reasons for using this strategy are the following.
@@ -307,6 +312,7 @@ We explore the benefit of using a ``fuzzy'' comparison of activity factors
 in choosing the bias variables in section \ref{sec:fuzzy activity}.
 
 \subsection{A Clustered Sharing Approach}
+\label{sec:clustered sharing}
 
 \begin{figure*}[htbp]
     \tikzstyle{box}=[rectangle,draw=black,thick,inner sep=2pt,text centered,
@@ -706,6 +712,7 @@ improving solver diversity. However, it appears this hurts performance more
 than it helps because of the loss of co-operation among processes.
 
 \subsection{Discussion of Performance}
+\label{sec:disc}
 
 Although our implementation outperforms ManySAT2.0, it is clear that there is
 a scalability bottleneck beyond 12 cores for the solver.  Some challenges
