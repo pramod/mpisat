@@ -49,7 +49,7 @@ further improvement of the existing solutions arise. In this paper, we present a
 parallel SAT solver algorithm based on conflict-driven clause sharing and
 message passing. We evaluate our approach on the base of the popular sequential
 MiniSAT solver and compare it with one of the most successful parallel solvers
-- ManySAT. Our experiments show that the proposed approach achieve up to 164X
+- ManySAT. Our experiments show that the proposed approach achieves up to 164X
 speedup. The average speedup when using four-core system is about 2X.
 
 \end{abstract}
@@ -59,8 +59,8 @@ The Boolean Satisfiability Problem, usually called just the SAT problem,
 is the task of finding an assignment of all variables of a boolean 
 formula in such a way that the whole formula evaluates to a true value.
 
-The SAT problem has been thoroughly investigated and understood during the last
-several decades. A lot of work has been done in both investigating the
+In the last few decades the SAT problem has been thoroughly investigated 
+and is well understood during the last. A lot of work has been done in both investigating the
 theoretical properties of the problem and its practical implications. It is the
 first problem in computer science that has been classified as NP-complete
 \cite{Cook1971}. One of the reasons, because of which it is so important, is the
@@ -84,7 +84,7 @@ algorithm that is based on message-passing.
 
 The main contributions of the paper are:
 \begin{itemize}
-\item Elaborate and precise analysis of the weaknesses of previous attempts 
+\item Precise analysis of the weaknesses of previous attempts 
 for parallization of SAT solvers.
 \item A novel parallel SAT solving algorithm based on message passing.
 \item Analysis of the interaction between the  parameters of the algorithm
@@ -99,10 +99,10 @@ Section \ref{sec:related}, describe our solution in more detail in Section
 \section{Related Work}
 \label{sec:related}
 
-Large number of different algorithms and their variations have been proposed for 
-this problem in the recent years. Basically, there are two main classes of modern 
+A large number of different algorithms and their variations have been proposed for 
+the SAT problem in the recent years. Basically, there are two main classes of modern 
 algorithms that are used to solve the SAT problem in practice: conflict-driven 
-clause learning algorithm and stochastic local search algorithms. Parallel modifications 
+clause learning algorithms and stochastic local search algorithms. Parallel modifications 
 of both approaches have been proposed.
 
 \subsection{Sequential Approaches}
@@ -112,7 +112,7 @@ This section provides a brief review of the advances in sequential SAT solvers.
 \subsubsection{Davis-Putnam-Logemann-Loveland (DPLL)}
 
 The DPLL algorithm, which is one of the first algorithmic techniques to solve
-the problem of Boolean satisfiability is a complete search algorithm based on
+the problem of Boolean satisfiability, is a complete search algorithm based on
 back-tracking. DPLL uses the following heuristics before each recursive call:
 
 \begin{itemize}
@@ -158,7 +158,7 @@ of the number of recent conflicts a variable has been involved in.  The
 intuition behind the metric is that it improves ``search space locality'' as
 variables recently involved in conflicts are more likely to be chosen by the
 decision heuristic.  This in turn improves overall performance by helping the
-solver ``close-out'' large regions of the search space.
+solver ``close out'' large regions of the search space.
 
 One of the main improvements that MiniSat~\cite{MiniSat} made on Chaff was to
 exploit input pre-processing and simplification. MiniSat has won a number of
@@ -196,7 +196,7 @@ structures brings additional overhead and complicates the implementation of the
 solver.
 
 \indent Another line of work tries to improve Chaff~\cite{Chrabakh03gradsat, 
-Lewis2007MiraXT}. At MiraXT~\cite{Lewis2007MiraXT} the threads share a database with 
+Lewis2007MiraXT}. In MiraXT~\cite{Lewis2007MiraXT} the threads share a database with 
 information about all clauses. When a clause is learned, it is written to the
 database. The synchronization on writing to this database is based on locking.
 
@@ -219,7 +219,7 @@ passing.  The main reasons for using this kind of strategy are the following:
 in previous parallel SAT solvers.
 \item Concurrent data structures such as work-stealing queues bring additional 
 overhead and makes the implementation more complicated.
-\item We would like to see whether message passing would have any advantage over
+\item We would like to see whether message passing has any advantage over
 shared-memory techniques for this problem.
 \end{itemize} 
 
@@ -251,27 +251,6 @@ Note the SAT solver will most likely \textit{not} explore all parts of the
 search space as this would simply take too long. Modern solvers are efficient
 because they determine satisfiability by using heuristics to explore only
 those parts of the search space that are likely to lead to a solution.
-
-\subsubsection{Clause Sharing Based on Activity Factors}
-Modern solvers since Chaff~\cite{Moskewicz2001Chaff} maintain an ``activity factor'' for
-each variable that is a measure of the number of conflicts a variable has
-recently been involved in. Variables with a high activity factor are chosen
-by the decision heuristic when determining which part of the search to explore
-next. 
-
-Modern solvers chose to explore parts of the search space determined by
-variables with a high activity factor.  If two processes are exploring
-``nearby'' parts of the search space, they will likely have the same set of
-variables with high activity factors. This suggests that activity factors may
-be a useful measure to determine which clauses ought to be shared with which
-variables. The challenge here is in communicating the activity factors from one
-process to another without the communication overhead negating any performance
-gains that may result from the clause sharing.
-
-One of the goals of our project is to gain an understanding of what clauses
-would be useful to share and design mechanisms for ``intelligent'' learned
-clause sharing.  Activity factors are likely to be a useful metric in designing
-such mechanisms.
 
 \subsection{Decision Heuristic} 
 
@@ -551,7 +530,7 @@ observations that can be made are the following:
 \begin{enumerate}
 
 \item When executing with only 2 cores, sharing as many clauses as possible
-(i.e., up to maximum sharing clause size (MSCS) of 64) is beneficial.
+(i.e., up to maximum sharing clause size [MSCS] of 64) is beneficial.
 
 \item When executing with four cores, the best performance is achieved when
 MSCS=16. This number corresponds to the results shown in the previous
@@ -572,7 +551,7 @@ best although there is an abberant data point for MSCS=32.
 
 Figure \ref{fig:mscs2} shows the impact of the maximum shared clause size on
 machine 2. This graph makes it very clear that sharing fewer clauses is
-\emph{not} beneficial for scalability because although this lesses the overhead
+\emph{not} beneficial for scalability because although this lessens the overhead
 of communication, it also results in processes co-operating less, hurting
 speedup. We also see that MSCS=16 is not beneficial for anything more than 16
 cores likely because of the overhead of all-to-all broadcasting of learned
@@ -653,7 +632,7 @@ variables only when the activity factors for the variables are exactly the same.
 
 Figure \ref{fig:aff} shows the impact of approximate comparison of the activity
 factors instead of exact comparison when choosing to bias the activity heuristic.
-We study tolerances range from $0.1\%$ to $10\%$ and find that exact comparison
+We study tolerances ranging from $0.1\%$ to $10\%$ and find that exact comparison
 is actually the best option!
 
 \subsection{Impact of the Base Restart Interval}
@@ -690,9 +669,9 @@ than it helps because of the loss of co-operation among processes.
 \label{sec:finish}
 
 We presented a new technique for parallelization of SAT solvers based
-on message passing. Our algorithm uses the conflict-driven clause learning 
-and the popular MiniSAT as an implementation basis. Our results show that 
-message passing is a promising approach for parallelizing this kind of 
+on message passing. Our algorithm uses conflict-driven clause learning 
+and the popular MiniSAT solver as an implementation basis. Our results show that 
+message passing is a promising approach for parallelizing these kinds of 
 applications and has some advantages over shared memory. Moreover, it is
 competitive with modern award-winning high-performance implementations such as ManySAT.
 \section*{Acknowledgements}
