@@ -40,7 +40,7 @@
 
 \begin{abstract} Boolean satisfiability checking (also known as SAT) is the
 problem of analyzing a Boolean formula to determine whether some assignment of
-variables exists that results in the formula evaluating to true. The problem is
+variables exists that results in the formula evaluating to truth. The problem is
 known to be NP-complete. Despite its apparent computational infeasibility,
 numerous algorithms have been proposed that solve large real-world instances of
 SAT in a reasonable amount of time. 
@@ -57,7 +57,7 @@ identify bottlenecks inhibiting further scaling.
 \section{Introduction}
 The Boolean satisfiability problem, usually called just the SAT problem, is the
 task of finding an assignment of all variables of a boolean formula such that
-the formula evaluates to true. It was the first problem in computer science to
+the formula evaluates to truth. It was the first problem in computer science to
 be classified as NP-complete~\cite{Cook1971}. A huge number of practical
 problems from various domains can be modelled as instances of SAT.  Examples
 include problems from hardware design and verification, software verification,
@@ -76,8 +76,8 @@ real-world instances of SAT.
 
 However, most modern SAT solvers are entirely sequential and do not utilize
 parallel computation in their algorithms. The advent of multicore era has
-opened up an opportunity for research into parallel SAT solvers and some
-parallel SAT solvers~\cite{ManySAT} have been designed for shared-memory
+opened up an opportunity for research into parallel SAT solvers and such 
+solvers~\cite{ManySAT} have been designed for shared-memory
 machines.  In this work, we build and evaluate a parallel SAT solver based on
 message-passing. Our motivation for exploring a message passing implementation
 is to enable scaling the parallel SAT solver to a large number of
@@ -110,8 +110,7 @@ Section \ref{sec:related}, describe our solution in more detail in Section
 A large number of different algorithms and their variations have been proposed for 
 the SAT problem in the recent years. Basically, there are two main classes of modern 
 algorithms that are used to solve the SAT problem in practice: conflict-driven 
-clause learning algorithms and stochastic local search algorithms. Parallel modifications 
-of both approaches have been proposed.
+clause learning algorithms and stochastic local search algorithms.
 
 \subsection{Sequential Approaches}
 
@@ -132,11 +131,11 @@ polarity in the whole formula, then it can be assigned with a value that
 corresponds to this polarity.
 \end{itemize}
 
-Note that the heuristics are applied iteratively. Pure literal elimination may
+Note that these heuristics are applied iteratively. Pure literal elimination may
 expose more clauses for unit propagation which in turn can cause more literals
 to become ``pure'' or generate new clauses for unit propagation and so on.
 Application of these heuristics drastically reduces the search space that needs
-to be explored after each assignment to a variable in the solver.
+to be explored after each assignment to a variable.
 
 \subsubsection{Conflict-Driven Clause Learning (CDCL)}
 
@@ -144,7 +143,7 @@ Conflict-driven Clause Learning (CDCL) was first proposed by the
 GRASP~\cite{Silva1997GRASP} solver. The key idea behind CDCL is that each time the
 solver finds a part of the search space that is unsatisfiable, it analyzes this
 ``conflict'' to learn a new clause. Keeping track of the \emph{learned clauses}
-helps the solver avoid exploring the same ``dead-ends'' over and over again.
+helps the solver avoid exploring the same ``dead ends'' over and over again.
 
 \subsubsection{Modern Solvers: Chaff and MiniSat}
 
@@ -189,7 +188,7 @@ The most successful SAT solvers based on this technique are WalkSAT
 In contrast to the work in sequential solvers, a relatively small number of 
 high-performance parallel approaches have been proposed.
 
-\indent The earliest attempt for a parallel solver is PSATO \cite{PSATO} which tries
+One of the earliest attempts for a parallel solver is PSATO \cite{PSATO} which tries
 to parallelize the sequential SATO (SAtisfiability Testing Optimized) solver
 \cite{Zhang94sato}. The computation environment of PSATO is a set of loosely connected 
 workstations and the exploration of the search space is organized in a master/slave 
@@ -197,28 +196,28 @@ model. One of the workstations is a master and all the others are slaves. Despit
 the fact that this model is simple and easy to implement, the master node can easily 
 become a bottleneck.
 
-\indent A number of efficient parallel SAT solvers use divide-and-conquer 
+A number of efficient parallel SAT solvers use divide-and-conquer 
 techniques~\cite{PMiniSat, Bohm96, Lewis2007MiraXT, Gil08Pmsat}. This method
 proves to be efficient in practice and easy to implement. 
 
-\indent Several algorithms use sophisticated concurrent data structures such
+Several algorithms use sophisticated concurrent data structures such
 as work-stealing queues for load balancing of the work performed by each thread
 ~\cite{Jurkowiak2005,PMiniSat}. Such load balancing is needed because of the 
 irregular structure of the boolean formulas. However, the usage of such data 
 structures brings additional overhead and complicates the implementation of the
 solver.
 
-\indent Another line of work tries to improve Chaff~\cite{Chrabakh03gradsat, 
+Another line of work tries to improve Chaff~\cite{Chrabakh03gradsat, 
 Lewis2007MiraXT}. In MiraXT~\cite{Lewis2007MiraXT} the threads share a database with 
 information about all clauses. When a clause is learned, it is written to the
-database. The synchronization on writing to this database is based on locking.
+database. The synchronization on writing to the database is based on locking.
 
-\indent One notable recent parallel algorithm is ManySAT \citep{ManySAT}.
+One notable recent parallel algorithm is ManySAT \citep{ManySAT}.
 ManySAT uses a portfolio of complimentary sequential algorithms that are
 derived from variations of the traditional DPLL algorithm. The basic idea is
 that each sequential algorithm broadcasts its learned clauses to all the
 others. In other words, all the threads benefit from the learning of each
-thread. 
+other thread.
 
 The reason for using a ``portfolio'' of search algorithms is to reduce
 performance sensitivity to parameter tuning. Sharing of learned clauses is an
@@ -255,7 +254,7 @@ problem in previous parallel SAT solvers.
 \item Concurrent data structures such as work-stealing queues bring additional
 overhead and makes the implementation more complicated.
 \item We would like to see whether message passing has any advantage or
-any overheads over shared-memory techniques for this problem.
+any overheads over shared-memory techniques for this specific problem.
 \end{itemize} 
 
 \subsection{Clause Sharing}
@@ -263,13 +262,13 @@ any overheads over shared-memory techniques for this problem.
 As the SAT solver explores the search space, it finds that certain regions of
 the space are unsatisfiable. This occurs each time the solver runs into a
 ``conflict''. Modern solvers since GRASP~\cite{Silva1997GRASP} \emph{analyze} each
-conflict to learn clauses that ensure that ``dead-ends'' are never visited
+conflict to learn clauses that ensure that ``dead ends'' are never visited
 again. In our solver, as in ManySAT~\cite{ManySAT}, clauses learned by one
 process are broadcast to all the other processes. This benefits speedup,
 because clauses learned ensure that no other process visits that part 
 of the search space again.
 
-\subsubsection{What Clauses To Share}
+\subsubsection{Which Clauses To Share}
 
 One important design decision here is deciding which clauses are to be shared
 with the other processes. As our results will show, sharing everything is not
@@ -466,7 +465,7 @@ Table \ref{tab:speedup} shows the speedup of ManySAT 2.0 and our implementation
 for the 25 selected benchmarks. Speedups are shown for 1, 2, 4 and 8 cores
 running on machine 1.  Our implementation shows significant speedup ($>2X$)
 when using 4 cores and slightly more for 8 cores. Since learned clauses are
-broadcast to all the other cores, it would seem that communication overheard
+broadcast to all the other cores, it would seem that communication overhead
 for 8 cores outweighs the sharing benefit. 
 
 We note that super-linear speedups are possible and observed in a number of
@@ -628,7 +627,7 @@ good speedup. \textit{mizh-sha0-36-4} shares a lot of useful short clauses but
 very few useful long clauses. For \textit{ibm-2004-29-k55}, we see that the
 distribution of the length of useful clauses is more uniform. This pattern was
 observed in a few other benchmarks with good speedup, which suggests that
-successfully sharing useful long clauses is important for performance. One
+successful sharing of useful long clauses is important for performance. One
 intuitive explanation for this could be that if the processes are sharing
 useful long clauses, it means they are co-operating to a greater extent than if
 they are just sharing useful short clauses. 
@@ -665,7 +664,7 @@ configuration that uses all-to-all broadcast.
 
 \subsection{Approximate comparison of activity factors}
 \label{sec:fuzzy activity}
-The default divide and conquer algorithm biases invidual cores towards certain
+The default divide-and-conquer algorithm biases invidual cores towards certain
 variables only when the activity factors for the variables are exactly the same.
 
 \begin{figure}[htbp]
@@ -705,7 +704,7 @@ interval improves performance, which makes intuitive sense because the parallel
 solver ``learns faster'' than a sequential solver. 
 
 The red bar shows the performance of using a ``mixed'' base restart interval.
-Half the processes use a restart interval of 100 conflicts while the others use a
+Half of the processes use a restart interval of 100 conflicts while the others use a
 restart interval of 50 conflicts. The intuition here was that mixed restart
 intervals would desynchronize the processes which might help performance by
 improving solver diversity. However, it appears this hurts performance more
@@ -749,7 +748,7 @@ learned clauses has little or no benefit. To prevent this, every so often
 ``resync'' to the same state and resume execution. The state here consists of
 the values of the activity factors and the database of learned clauses.
 Resuming execution from this common state will probably result in sharing
-becoming benefical again. The resync may be the parallel analog of the restart
+to become benefical again. The resync may be the parallel analog of the restart
 operation that is an essential part of the sequential SAT solver.
 
 \section{Conclusion}
