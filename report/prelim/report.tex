@@ -39,58 +39,61 @@
 \pagenumbering{arabic}
 
 \begin{abstract}
-The Boolean Satisfiability Problem is a task with many practical applications
-and is known to be NP-complete. Numerous different algorithms have been
-proposed in the literature that effectively solve real-world instances of the
-problem in a reasonable amount of time. 
+Boolean satisfiability checking (also known as SAT) is the problem of analyzing
+a Boolean formula to determine whether some assignment of variables exists that
+results in the formula evaluating to true. The problem is known to be
+NP-complete. Despite its apparent computational infeasibility, numerous
+algorithms have been proposed that solve large real-world instances of SAT in a
+reasonable amount of time. 
 
 With the advent of fast modern multiprocessor systems, new directions for
-further improvement of the existing solutions arise. In this paper, we present a
+further improvement of these solvers have emerged. In this paper, we present a
 parallel SAT solver algorithm based on conflict-driven clause sharing and
-message passing. We evaluate our approach on the base of the popular sequential
-MiniSAT solver and compare it with one of the most successful parallel solvers
-- ManySAT. Our experiments show that the proposed approach achieves up to 164X
-speedup. The average speedup when using four-core system is about 2X.
+message passing. Our experiments find the average speedup of our implementation
+when using four-cores is about 2X and increases to 3.6X when using 16 cores.
+We also present an analysis of the performance of our parallel SAT solver and
+identify bottlenecks inhibiting further scaling.
 
 \end{abstract}
 
 \section{Introduction}
-The Boolean Satisfiability Problem, usually called just the SAT problem, 
-is the task of finding an assignment of all variables of a boolean 
-formula in such a way that the whole formula evaluates to a true value.
+The Boolean Satisfiability Problem, usually called just the SAT problem, is the
+task of finding an assignment of all variables of a boolean formula such that
+the formula evaluates to true. It was the first problem in computer science to
+be classified as NP-complete~\cite{Cook1971}. A huge number of practical
+problems from various domains can be modelled as instances of SAT.  Examples
+include problems from hardware design and verification, software verification,
+artificial intelligence, graph theory, logistics and computational biology. 
 
-In the last few decades the SAT problem has been thoroughly investigated 
-and is well understood during the last. A lot of work has been done in both investigating the
-theoretical properties of the problem and its practical implications. It is the
-first problem in computer science that has been classified as NP-complete
-\cite{Cook1971}. One of the reasons, because of which it is so important, is the
-fact that a huge number of practical problems from various domains can be modelled
-as instances of the SAT problem. Examples include problems from hardware design and
-verification, artificial intelligence, graph theory, logistics and others. This 
-resulted in extensive research of this problem and tremendous progress in finding 
-efficient ways to solve SAT in a reasonable amount of time. Myriad sophisticated
-algorithms~\cite{Davis1962,Selman1992,Zhang94sato,Selman95localsearch,PSATO,Bohm96,
-Silva1997GRASP,Moskewicz2001Chaff,Forman02NagSat,MiniSat,Blochinger2003,Chrabakh03gradsat,
-Jurkowiak2005,Lewis2007MiraXT,PMiniSat,Gil08Pmsat,ManySAT} have appeared in the 
-scientific literature and special competitions \cite{SATRace2008} have been organized 
-to compare different ideas and implementations.
+The importance of the SAT problem has resulted in extensive research into
+efficient heuristic SAT solvers and tremendous progress in finding efficient
+ways of solving large SAT instances in a reasonable amount of time.  Myriad
+sophisticated algorithms~\cite{Davis1962, Selman1992, Zhang94sato,
+Selman95localsearch, PSATO, Bohm96, Silva1997GRASP, Moskewicz2001Chaff,
+Forman02NagSat, MiniSat, Blochinger2003, Chrabakh03gradsat, Jurkowiak2005,
+Lewis2007MiraXT, PMiniSat, Gil08Pmsat, ManySAT} for SAT-checking have appeared
+in the scientific literature and special competitions \cite{SATRace2008} are
+organized that compare the performance of state-of-the-art implementations on
+real-world instances of SAT. 
 
-However, most of the modern SAT solvers are entirely sequential and do not try 
-to introduce any kind of parallel computation in their algorithms. The advent 
-of new powerful multiprocessor architectures brings new directions in which SAT 
-solvers can be improved. The few existing parallel SAT solvers are based 
-mainly on shared-memory techniques. In this work, we propose a new parallel 
-algorithm that is based on message-passing.
+However, most modern SAT solvers are entirely sequential and do not utilize
+parallel computation in their algorithms. The advent of multicore era has
+opened up up an opportunity for research into parallel SAT solvers and some
+parallel SAT solvers~\cite{ManySAT} have been designed for shared-memory
+machines.  In this work, we build and evaluate a parallel SAT solver based on
+message-passing. The motivation for exploring a message passing implementation
+is to enable scaling the SAT solver to a large number of cores/processes.
 
-The main contributions of the paper are:
-\begin{itemize}
-\item Precise analysis of the weaknesses of previous attempts 
-for parallization of SAT solvers.
-\item A novel parallel SAT solving algorithm based on message passing.
-\item Analysis of the interaction between the  parameters of the algorithm
-(e.g. shared clause size and restart interval) and the various effects of different 
-values of these parameters.
-\end{itemize}
+The novel contributions of this paper are the design of a message passing based
+SAT solver and a thorough analysis of the parameters that affect its
+performance. We also identify bottlenecks in the solver that inhibit further
+scaling and make some comments on future work.  Our evaluation of the
+performance and scaling of our implementation finds that it achieves a
+maximum speed up of 164X over the sequential solver MiniSAT. Average speedup
+when using four cores is 2.0X and increases up to 3.6X when executing using
+16-cores. We compare our implementation with the popular ManySAT 2.0 shared
+memory parallel solver and find that it outperforms ManySAT 2.0. 
+
 The rest of this paper is organized as follows: we review related work in
 Section \ref{sec:related}, describe our solution in more detail in Section
 \ref{sec:strategy}, present experimental evaluation of our approach in Section
@@ -123,7 +126,12 @@ can be only satisfied by giving such a value to the literal that makes it true.
 polarity in the whole formula, then it can be assigned with a value that
 corresponds to this polarity.
 \end{itemize}
-These heuristics drastically reduce the search space.
+
+Note that the heuristics are applied iteratively. Pure literal elimination may
+expose more clauses for unit propagation which in turn can cause more literals
+to become ``pure'' and so on. Application of these heuristics drastically
+reduces the search space that needs to be explored after each assignment to a
+variable in the solver.
 
 \subsubsection{Conflict-Driven Clause Learning (CDCL)}
 
@@ -131,39 +139,39 @@ Conflict-driven Clause Learning (CDCL) was first proposed by the
 GRASP~\cite{Silva1997GRASP} solver. The key idea behind CDCL is that each time the
 solver finds a part of the search space that is unsatisfiable, it analyzes this
 ``conflict'' to learn a new clause. Keeping track of the \emph{learned clauses}
-helps the solver not to explore the same ``dead-ends'' over and over again.
+helps the solver avoid exploring the same ``dead-ends'' over and over again.
 
 \subsubsection{Modern Solvers: Chaff and MiniSat}
 
-Chaff~\cite{Moskewicz2001Chaff} improves upon GRASP using two techniques.  The first is a
-data structure that enables efficient traversal of the clause database when
-performing unit propagation known as \textbf{two-literal watching}. The second
-is the introduction of an efficient decision heuristic called
+Chaff~\cite{Moskewicz2001Chaff} improves upon GRASP using two techniques.  The
+first is a data structure known as \textbf{two-literal watching} which enables
+efficient traversal of the clause database when performing unit propagation.
+The second is the introduction of an efficient decision heuristic called
 \textbf{Variable State Independent Decaying Sum (VSIDS)}.
 
 Two-literal watching maintains the invariant that two unassigned variables are
 watched in every clause. In other words, when a literal is assigned to, it is
-removed from the watchlist and replaced with an unwatched literal. When no
-unwatched literal can be found, it means the clause is eligible for unit
-propagation. The key advantage of two-literal watching is that it enables
-efficient unit propagation without forcing the solver to traverse the entire
-clause database.
+removed from the watchlist of the clauses in which it is being watched and
+replaced with an unwatched literal. When no unwatched literal can be found, the
+clause is eligible for unit propagation. The key advantage of two-literal
+watching is that it enables efficient unit propagation without forcing the
+solver to traverse the entire clause database.
 
 The decision heuristic in a SAT solver determines which variable is to be
-assigned to (``branched'' on) next.  Variable State Independent
-Decaying Sum (VSIDS) was a decision heuristic instroduced by Chaff which tends
-to make the SAT solver explore variables that were recently involved in
-conflicts. VSIDS keeps track of an ``activity factor'' metric that is a measure
-of the number of recent conflicts a variable has been involved in.  The
-intuition behind the metric is that it improves ``search space locality'' as
-variables recently involved in conflicts are more likely to be chosen by the
-decision heuristic.  This in turn improves overall performance by helping the
-solver ``close out'' large regions of the search space.
+assigned to (``branched'' on) next.  Variable State Independent Decaying Sum
+(VSIDS) was a decision heuristic instroduced by Chaff which tends to make the
+SAT solver explore variables that were recently involved in conflicts. VSIDS
+keeps track of an ``activity factor'' metric that is a measure of the number of
+recent conflicts a variable has been involved in.  The intuition behind the
+usage of the metric is that it improves ``search space locality'' as variables
+recently involved in conflicts are more likely to be chosen by the decision
+heuristic.  This in turn improves overall performance by helping the solver
+``close out'' large regions of the search space.
 
 One of the main improvements that MiniSat~\cite{MiniSat} made on Chaff was to
 exploit input pre-processing and simplification. MiniSat has won a number of
 the ``SAT-Race'' competitions and we use MiniSat version 2.2 as the baseline
-for our work.
+for our implementation.
 
 \subsubsection{Stochastic Local Search Algorithm}
 Another fundamental approach is to apply local search in the space of possible
@@ -200,27 +208,49 @@ Lewis2007MiraXT}. In MiraXT~\cite{Lewis2007MiraXT} the threads share a database 
 information about all clauses. When a clause is learned, it is written to the
 database. The synchronization on writing to this database is based on locking.
 
-\indent The most notable recent parallel algorithm is ManySAT \citep{ManySAT}.
-ManySAT uses a portfolio of complimentary sequential algorithms that are derived
-from variations of the traditional DPLL algorithm. The basic idea is that each 
-sequential algorithm broadcasts its learned clauses to all the others.
+\indent One notable recent parallel algorithm is ManySAT \citep{ManySAT}.
+ManySAT uses a portfolio of complimentary sequential algorithms that are
+derived from variations of the traditional DPLL algorithm. The basic idea is
+that each sequential algorithm broadcasts its learned clauses to all the
+others. In other words, all the threads benefit from the learning of each
+thread. 
+
+The reason for using a ``portfolio'' of search algorithms is to reduce
+performance sensitivity to parameter tuning. Sharing of learned clauses is an
+effective vehicle for loosely coupled co-operation between the threads in the
+solver. ManySAT is built for shared memory machines using OpenMP.
+
+Since we are interested in studying the interaction between communication
+(sharing of learned clauses) and computation in the solver, we do not use the
+portfolio approach. Each process uses the same algorithm and the same
+parameters with only slight differences coming in through a different random
+seed for each process and the use of a slightly modified decision heuristic
+(see \S\ref{sec:decheu}).
 
 \section{Parallelization Strategy}
 \label{sec:strategy}
 
-Our general strategy for parallelization is twofold. To a limited extent we use
-divide-and-conquer strategy to ensure that the different processes are working
-on different parts of the search space. However, processes co-operate with each
-other process by sharing learned clauses. We do not use any concurrent data 
-structures for load balancing and the whole implementation is based on message
-passing.  The main reasons for using this kind of strategy are the following:
+At a high-level our parallelization strategy is similar to ManySAT. The
+parallel solver executes $N$ processes, each of which independently explores
+the search space. As the solver is based on CDCL, each time t runs into a
+``conflict'', it generates a learned clause. If the size of the learned clause
+from the conflict is sufficiently small it broadcasts the learned clause to all
+the other processes.  After each assignment to a variable, each process checks
+whether any learned clauses are available to be read from the other processes.
+If so, it adds these clauses to its two-literal watching data structure. To
+ensure that the different processes of the solver don't end up doing redundant
+work, we use different random seeds for each thread and bias each thread
+towards certain variables resulting in a type of divide-and-conquer
+partitioning while exploring the search space.
+
+The main reasons for using this strategy are the following.
 \begin{itemize}
-\item Divide-and-conquer algorithms have proven to work well on this problem
-in previous parallel SAT solvers.
-\item Concurrent data structures such as work-stealing queues bring additional 
+\item Divide-and-conquer algorithms have been proven to work well on this
+problem in previous parallel SAT solvers.
+\item Concurrent data structures such as work-stealing queues bring additional
 overhead and makes the implementation more complicated.
-\item We would like to see whether message passing has any advantage over
-shared-memory techniques for this problem.
+\item We would like to see whether message passing has any advantage or
+any overheads over shared-memory techniques for this problem.
 \end{itemize} 
 
 \subsection{Clause Sharing}
@@ -230,7 +260,7 @@ the space are unsatisfiable. This occurs each time the solver runs into a
 ``conflict''. Modern solvers since GRASP~\cite{Silva1997GRASP} \emph{analyze} each
 conflict to learn clauses that ensure that ``dead-ends'' are never visited
 again. In our solver, as in ManySAT~\cite{ManySAT}, clauses learned by one
-process are broadcasted to all the other processes. This benefits speedup,
+process are broadcast to all the other processes. This benefits speedup,
 because clauses learned ensure that no other process visits that part 
 of the search space again.
 
@@ -253,6 +283,7 @@ because they determine satisfiability by using heuristics to explore only
 those parts of the search space that are likely to lead to a solution.
 
 \subsection{Decision Heuristic} 
+\label{sec:decheu}
 
 The decision heuristic in a SAT solver determines which variable is to be
 assigned to and ``branch'' on next. Modern SAT solvers use the activity factor
@@ -264,10 +295,16 @@ search space among different processes while ensuring that they don't go too
 independent parts of the search space, the learned clauses from one process
 will likely not be useful to other processes. 
 
-Our current decision heuristic balances these goals in the following way.  If
+Our novel decision heuristic balances these goals in the following way.  If
 two variables have exactly the same activity factor, the heuristic biases
 process $i$ towards variables $v_k$ such that $k~mod~i=0$. If two variables
 have differing activity factors, the variable with higher activity is chosen.
+The effect of this metric is that if a formula consists of $K$ variables,
+and the parallel solver is executing $N$ processes, each process will prefer
+exploring $K/N$ variables over the remaining. 
+
+We explore the benefit of using a ``fuzzy'' comparison of activity factors
+in choosing the bias variables in section \ref{sec:fuzzy activity}.
 
 \subsection{A Clustered Sharing Approach}
 
@@ -294,18 +331,17 @@ have differing activity factors, the variable with higher activity is chosen.
 \end{figure*}
 
 Figure \ref{fig:simple} shows the ``simple'' sharing approach. This is similar
-to ManySAT and is the form of sharing implemented in the results shown. Each
-process shares all learned clauses less than a certain maximum length with
-every other process.
+to ManySAT. Each process shares all learned clauses less than a certain maximum
+length with every other process.
 
-A different approach to clause sharing is shown in Figure \ref{fig:cluster}.
-Here, the idea is that processes within the same cluster will share both long
-and short clauses with each other. However, processes in different clusters
-will only share short clauses with each other. The intuition here is that short
-clauses are more general and hence likely to be useful to all processes while
-the processes in a cluster are likely to be working on the same set of
-variables and hence it makes sense to share longer and more specific clauses
-with the rest of the cluster.
+Besides simple sharing, we also introduce different approach to clause sharing
+shown in Figure \ref{fig:cluster}.  Here, the idea is that processes within the
+same cluster will share both long and short clauses with each other.  However,
+processes in different clusters will only share short clauses with each other.
+The justification is that short clauses are more general and hence likely to be
+useful to all processes while the processes in a cluster are likely to be
+working on the same set of variables and hence it makes sense to share longer
+and more specific clauses with the rest of the cluster.
 
 \begin{figure*}[htbp]
     \tikzstyle{box}=[rectangle,draw=black,thick,inner sep=2pt,text centered,
@@ -345,14 +381,13 @@ with the rest of the cluster.
     \label{fig:cluster}
  \end{figure*}
 
-\section{Results}
+\section{Evaluation}
 \label{sec:results}
 
-This section presents our results with both the simple clause sharing and 
-the clustered one. The results shown in Section \ref{sec:speedup}
-share clauses with 16 literals or fewer with all the other cores. Section
-\ref{sec:sharing effects} investigates the impact of sharing shorter
-and longer clauses.
+This section presents our results with both the simple clause sharing and the
+clustered sharing. The results shown in Section \ref{sec:speedup} share clauses
+with 16 literals or fewer with all the other cores. Section \ref{sec:sharing
+effects} investigates the impact of sharing shorter and longer clauses.
 
 \subsection{Methodology}
 Our benchmark problems are taken from SAT-Race 2008~\cite{SATRace2008}. We
@@ -362,7 +397,7 @@ fastest solver in SAT-Race 2008} Among these 100 problems, we chose to
 experiment with a subset of 25 problems that took MiniSat 2.2 between 40s and
 200s to execute. Our intention in choosing this subset was to choose a small
 number of problems that we could execute relatively quickly and often while
-simultaneously ensuring that we avoid those that finished in a few seconds.
+also ensuring that we avoid problems that finished in a few seconds.
 
 Fourteen among the chosen 25 problems are satisfiable while the remaining
 eleven are unsatisfiable. The comparison with ManySAT uses ManySAT version 2.0
@@ -371,8 +406,8 @@ parameter settings were used when executing ManySAT.
 
 
 Experiments were performed on an 8-core Intel\textregistered
-~Xeon\textregistered ~E31230 CPU clocked at 3.20GHz with 32 GB of RAM (machine 1)
-and a 24-core Intel\textregistered~Xeon ~E5645 CPU clocked at 2.40 GHz with
+~Xeon\textregistered ~E31230 CPU clocked at 3.20GHz with 32 GB of RAM (machine
+1) and a 24-core Intel\textregistered~Xeon ~E5645 CPU clocked at 2.40 GHz with
 128GB of RAM (machine 2). 
 
 \subsection{Speedup}
@@ -421,12 +456,12 @@ and a 24-core Intel\textregistered~Xeon ~E5645 CPU clocked at 2.40 GHz with
     \label{tab:speedup}
 \end{table*}
 
-Table \ref{tab:speedup} shows the speedup of ManySAT 2.0 and our
-implementation for the 25 selected benchmarks. Speedups are shown for 1, 2, 4
-and 8 cores running on machine 1.  Our implementation shows significant speedup
-($>2X$) when using 4 cores and slightly more for 8 cores. Since
-learned clauses are broadcast to all the other cores, it would seem that
-communication overheard for 8 cores outweighs the sharing benefit. 
+Table \ref{tab:speedup} shows the speedup of ManySAT 2.0 and our implementation
+for the 25 selected benchmarks. Speedups are shown for 1, 2, 4 and 8 cores
+running on machine 1.  Our implementation shows significant speedup ($>2X$)
+when using 4 cores and slightly more for 8 cores. Since learned clauses are
+broadcast to all the other cores, it would seem that communication overheard
+for 8 cores outweighs the sharing benefit. 
 
 We note that super-linear speedups are possible and observed in a number of
 benchmarks.  Since SAT-solving is essentially a heuristic search, combining
@@ -451,7 +486,7 @@ problems shown in Table \ref{tab:speedup}. The overall speedup measured here is
 speedup compared to MiniSat 2.2 baseline for the time taken to solve all 25
 problems by the two parallel solvers. It can be seen that the MPI-based
 parallel solver gets only slightly faster when going from 1 to 2 cores. Going
-from 2 to 4 cores produces significant speedup but speedup is already tapering
+from 2 to 4 cores produces significant gains but speedup is already tapering
 off at 8 cores. The MPI-based parallel solver out-performs ManySAT 2.0 by a
 small amount for both 4 and 8 cores.
 
@@ -502,8 +537,9 @@ found that ManySAT2.0 was crashing on some instances when running on more than
 8 cores, so we do not present the results for ManySAT in this table. We also
 found that some of the 25 instances timed out\footnote{The timeout was set to
 1000 seconds.} so results for these instances are not shown if any one of the
-experiments timed out. Leaving out these instances left us with the 20
-benchmarks shown in Table \ref{tab:scalability}. 
+experiments timed out. Leaving out these instances from the original set of 25
+shown in Table \ref{tab:speedup} left us with the 20 benchmarks shown in Table
+\ref{tab:scalability}. 
 
 We see from Table \ref{tab:scalability} that some performance improvements are
 seen up to 16 cores but there is a slowdown when running the program with 20
@@ -524,7 +560,7 @@ and the divide-and-conquer approach outweighs the benefits of clause sharing.
 Figure \ref{fig:mscs} shows the effect of maximum size of shared clauses on the
 speedup for machine 1. Note these results are slightly different from those
 shown in Figure \ref{fig:speedup} because of noise in the timing measurements.
-Although the trends are somewhat hard to interpret because of the noise. Several
+Although the trends are somewhat hard to interpret because of the noise, some
 observations that can be made are the following:
 
 \begin{enumerate}
@@ -575,7 +611,7 @@ to a learned class obtained from another process as an ``imported''
 clause.\footnote{The term ``imported'' clause is borrowed from the ManySAT
 codebase.} An imported clause that subsequently causes a conflict is called a
 ``useful'' clause. Clearly, imported clauses that never get involved in a
-conflict are undesireable because they simply contribute to the communication
+conflict are undesirable because they simply contribute to the communication
 overhead without aiding any of the computation.
 
 Figure \ref{fig:useful} shows the percentage of clauses and the distribution of
@@ -595,9 +631,10 @@ they are just sharing useful short clauses.
 as much possible while making sure they don't end up doing redundant work to
 get good performance.} Simply exploring different parts of the search space is
 unlikely to result in useful co-operation/good performance. The other big
-takeaway from the figure is that the majority of clauses are actually useless,
-which suggests that there is potential here to improve scalability by the
-design of intelligent heuristics that share only a subset of learned clauses.
+takeaway from the figure is that the majority of shared clauses are actually
+useless, which suggests that there is potential here to improve scalability by
+the design of intelligent heuristics that share only a subset of learned
+clauses.
 
 \subsection{Clustered Sharing Results}
 \begin{figure}[htbp]
@@ -621,6 +658,7 @@ configuration that uses all-to-all broadcast.
 
 
 \subsection{Approximate comparison of activity factors}
+\label{sec:fuzzy activity}
 The default divide and conquer algorithm biases invidual cores towards certain
 variables only when the activity factors for the variables are exactly the same.
 
@@ -631,9 +669,11 @@ variables only when the activity factors for the variables are exactly the same.
 \end{figure}
 
 Figure \ref{fig:aff} shows the impact of approximate comparison of the activity
-factors instead of exact comparison when choosing to bias the activity heuristic.
-We study tolerances ranging from $0.1\%$ to $10\%$ and find that exact comparison
-is actually the best option!
+factors instead of exact comparison when choosing to bias the activity
+heuristic.  We study tolerances ranging from $0.1\%$ to $10\%$ and find that
+exact comparison is actually the best option! This result means that
+``fudging'' the activity factors to make the decision heuristic choose the
+variables a process is biased towards is not beneficial.
 
 \subsection{Impact of the Base Restart Interval}
 
@@ -665,6 +705,20 @@ intervals would desynchronize the processes which might help performance by
 improving solver diversity. However, it appears this hurts performance more
 than it helps because of the loss of co-operation among processes.
 
+\subsection{Discussion of Performance}
+
+Although our implementation outperforms ManySAT2.0, it is clear that there is
+a scalability bottleneck beyond 16 cores for the solver. The challenge in
+scaling the solver beyond 8/12 cores is ensuring that the processes
+stay ``close enough'' that the learned clauses from the other processes
+are useful while simultaneously 
+
+\section*{Acknowledgements}
+
+We would like to thank Professor David Wentzlaff and Professor Sharad Malik for
+sharing their suggestions and ideas with us. We would also like to thank our
+reviewers for the many useful comments that improved this paper.
+
 \section{Conclusion}
 \label{sec:finish}
 
@@ -674,10 +728,6 @@ and the popular MiniSAT solver as an implementation basis. Our results show that
 message passing is a promising approach for parallelizing these kinds of 
 applications and has some advantages over shared memory. Moreover, it is
 competitive with modern award-winning high-performance implementations such as ManySAT.
-\section*{Acknowledgements}
-
-We would like to thank Professor David Wentzlaff and Professor Sharad Malik for
-sharing their suggestions and ideas with us.
 
 \bibliographystyle{plain}
 \bibliography{report}
