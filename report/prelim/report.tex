@@ -132,7 +132,7 @@ Conflict-driven Clause Learning (CDCL) was first proposed by the
 GRASP~\cite{Silva1997GRASP} solver. The key idea behind CDCL is that each time the
 solver finds a part of the search space that is unsatisfiable, it analyzes this
 ``conflict'' to learn a new clause. Keeping track of the \emph{learned clauses}
-helps the solver not to explore the same ``dead-ends'' over and over again.
+helps the solver not to explore the same ``dead ends'' over and over again.
 
 \subsubsection{Modern Solvers: Chaff and MiniSat}
 
@@ -210,9 +210,9 @@ sequential algorithm broadcasts its learned clauses to all the others.
 \label{sec:strategy}
 
 Our general strategy for parallelization is twofold. To a limited extent we use
-divide-and-conquer strategy to ensure that the different processes are working
+a divide-and-conquer strategy to ensure that the different processes are working
 on different parts of the search space. However, processes co-operate with each
-other process by sharing learned clauses. We do not use any concurrent data 
+other by sharing learned clauses. We do not use any concurrent data 
 structures for load balancing and the whole implementation is based on message
 passing.  The main reasons for using this kind of strategy are the following:
 \begin{itemize}
@@ -229,7 +229,7 @@ shared-memory techniques for this problem.
 As the SAT solver explores the search space, it finds that certain regions of
 the space are unsatisfiable. This occurs each time the solver runs into a
 ``conflict''. Modern solvers since GRASP~\cite{Silva1997GRASP} \emph{analyze} each
-conflict to learn clauses that ensure that ``dead-ends'' are never visited
+conflict to learn clauses that ensure that ``dead ends'' are never visited
 again. In our solver, as in ManySAT~\cite{ManySAT}, clauses learned by one
 process are broadcasted to all the other processes. This benefits speedup,
 because clauses learned ensure that no other process visits that part 
@@ -622,7 +622,7 @@ configuration that uses all-to-all broadcast.
 
 
 \subsection{Approximate comparison of activity factors}
-The default divide and conquer algorithm biases invidual cores towards certain
+The default divide-and-conquer algorithm biases invidual cores towards certain
 variables only when the activity factors for the variables are exactly the same.
 
 \begin{figure}[htbp]
