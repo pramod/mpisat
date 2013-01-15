@@ -95,6 +95,8 @@ static IntOption     opt_max_shareout_size (_cat, "max-shareout-size",  "Maximum
 static DoubleOption  opt_activity_ff       (_cat, "activity-ff",        "Fudge factor to use when comparing activities (default=1.0; no fudging).", 1.0);
 static IntOption     opt_share_act_vars    (_cat, "share-act-vars",     "Number of active variables to share. (default=0; no sharing)", 0);
 static IntOption     opt_freq_th           (_cat, "freq-th",            "Frequency threshold when sharing active vars (default=2).", 2);
+static BoolOption    opt_flip_sign         (_cat, "flip-sign",          "Flip the default polarities of the variables in half the threads.", false);
+static IntOption     opt_heap_depth        (_cat, "heap-depth",         "Look beyond the max in the heap until this depth. (default=-1/don't look beyond first)", -1);
 
 
 //=================================================================================================
@@ -349,7 +351,7 @@ Var Solver::newVar(bool sign, bool dvar)
     //activity .push(0);
     activity .push(rnd_init_act ? drand(random_seed) * 0.00001 : 0);
     seen     .push(0);
-    polarity .push(sign);
+    polarity .push( (opt_flip_sign && (taskId & 1)) ? !sign : sign );
     decision .push();
     trail    .capacity(v+1);
     setDecisionVar(v, dvar);
@@ -462,11 +464,16 @@ Lit Solver::pickBranchLit()
 
     // Activity based decision:
     while (next == var_Undef || value(next) != l_Undef || !decision[next])
-        if (order_heap.empty()){
+        if (order_heap.empty()) {
             next = var_Undef;
             break;
-        }else
-            next = order_heap.removeMin();
+        } else {
+            if(opt_heap_depth != -1) {
+                next = order_heap.removeMin(taskId%opt_heap_depth, opt_heap_depth);
+            } else {
+                next = order_heap.removeMin();
+            }
+        }
 
     return next == var_Undef ? lit_Undef : mkLit(next, rnd_pol ? drand(random_seed) < 0.5 : polarity[next]);
 }
