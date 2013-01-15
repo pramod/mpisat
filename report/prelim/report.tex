@@ -574,7 +574,7 @@ subsection.
 
 \item When executing with either cores, sharing less (MSCS=8) seems to be the
 best although there is an abberant data point for MSCS=32.
-      
+     
 \end{enumerate}
 
 \begin{figure}[htbp]
@@ -708,10 +708,42 @@ than it helps because of the loss of co-operation among processes.
 \subsection{Discussion of Performance}
 
 Although our implementation outperforms ManySAT2.0, it is clear that there is
-a scalability bottleneck beyond 16 cores for the solver. The challenge in
-scaling the solver beyond 8/12 cores is ensuring that the processes
-stay ``close enough'' that the learned clauses from the other processes
-are useful while simultaneously 
+a scalability bottleneck beyond 12 cores for the solver.  Some challenges
+that need to be solved in further scaling performance are described below.
+
+The decision heuristic introduced in Section \ref{sec:decheu} works to a
+limited extent but when scaled to a large number of processes, it results in
+the processes exploring completely different parts of the search space with
+little co-operation. Therefore, one challenge that a scalable SAT solver needs
+to solve is designing a decision heuristic that prevents redundant work while
+still making sure the processes are able to co-operate effectively.  Processes
+being unable to co-operate effectively is also likely to be the reason why the
+approximate comparison of activity factors hurts performance.
+
+The second bottleneck is evident from Figure \ref{fig:useful}. The vast
+majority of shared clauses are useless. This just results in wasted communication
+with no benefits whatsoever. Therefore a second challenge that a scalable
+parallel solver will need to address in designing an intelligent heuristic
+that shares \emph{useful} clauses with the other threads.
+
+A third challenge is the reason for the failure of the clustered sharing
+approach. Clustered sharing underperforms simple broadcast sharing because the
+processes which are sharing longer clauses with each other may not be the
+processes that are working on nearby regions of the search space. Therefore
+it seems that there is potential here for improving scalability by
+designing heuristics that determine which other processes each process
+co-operates/communicates with.
+
+Finally, we hypothesize that a parallel solver needs a periodic ``resync''
+operation. The intuition here is that after an extended period of execution,
+the processes may ``wander away'' from each other and then the sharing of
+learned clauses has little or no benefit. To prevent this, every so often
+(measured in time period of several seconds) the processes can all be forced
+``resync'' to the same state and resume execution. The state here consists of
+the values of the activity factors and the database of learned clauses.
+Resuming execution from this common state will probably result in sharing
+becoming benefical again. The resync may be the parallel analog of the restart
+operation that is an essential part of the sequential SAT solver.
 
 \section*{Acknowledgements}
 
@@ -729,6 +761,8 @@ message passing is a promising approach for parallelizing these kinds of
 applications and has some advantages over shared memory. Moreover, it is
 competitive with modern award-winning high-performance implementations such as ManySAT.
 
+\footnotesize{
 \bibliographystyle{plain}
 \bibliography{report}
+}
 \end{document}
