@@ -118,6 +118,30 @@ class Heap {
         return x; 
     }
 
+    int removeMin(int bias, int max)
+    {
+        int pos = -1;
+
+        if(max > heap.size()) {
+            pos = 0;
+        } else {
+            for(int i=0; i != max; i++) {
+                if((heap[i] % max) == bias) {
+                    pos = i;
+                }
+            }
+        }
+        if(pos == -1) pos = 0;
+
+        int x               = heap[pos];
+        heap[pos]           = heap.last();
+        indices[heap[pos]]  = 0;
+        indices[x]          = -1;
+        heap.pop();
+        if (heap.size() > (pos+1)) percolateDown(pos);
+        return x;
+    }
+
 
     // Rebuild the heap from scratch, using the elements in 'ns':
     void build(vec<int>& ns) {
