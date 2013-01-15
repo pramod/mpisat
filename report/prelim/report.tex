@@ -90,7 +90,7 @@ partitions the search space amongst processes (\S\ref{sec:decheu}) and
 a clustered form of clause sharing that attempts to trade-off communication
 cost with the benefits of sharing (\S\ref{sec:clustered sharing}). We also
 identify bottlenecks in the solver that inhibit further scaling (\S
-\ref{sec:disc}) and make some comments on future work.  
+\ref{sec:disc}) and make some suggestions for future work.  
 
 Our evaluation of the performance and scaling of our implementation finds that
 it achieves a maximum speed up of 164X over the sequential solver MiniSAT.
@@ -222,7 +222,7 @@ other thread.
 The reason for using a ``portfolio'' of search algorithms is to reduce
 performance sensitivity to parameter tuning. Sharing of learned clauses is an
 effective vehicle for loosely coupled co-operation between the threads in the
-solver. ManySAT is built for shared memory machines using OpenMP.
+solver. ManySAT is built for shared memory machines and uses OpenMP.
 
 Since we are interested in studying the interaction between communication
 (sharing of learned clauses) and computation in the solver, we do not use the
@@ -305,10 +305,10 @@ process $i$ towards variables $v_k$ such that $k~mod~i=0$. If two variables
 have differing activity factors, the variable with higher activity is chosen.
 The effect of this metric is that if a formula consists of $K$ variables,
 and the parallel solver is executing $N$ processes, each process will prefer
-exploring $K/N$ variables over the remaining. 
+exploring $K/N$ variables over the remaining $K - K/N$ variables. 
 
 We explore the benefit of using a ``fuzzy'' comparison of activity factors
-in choosing the bias variables in section \ref{sec:fuzzy activity}.
+in the decision heuristic in Section \ref{sec:fuzzy activity}.
 
 \subsection{A Clustered Sharing Approach}
 \label{sec:clustered sharing}
@@ -389,10 +389,8 @@ and more specific clauses with the rest of the cluster.
 \section{Evaluation}
 \label{sec:results}
 
-This section presents our results with both the simple clause sharing and the
-clustered sharing. The results shown in Section \ref{sec:speedup} share clauses
-with 16 literals or fewer with all the other cores. Section \ref{sec:sharing
-effects} investigates the impact of sharing shorter and longer clauses.
+This section presents the results of our evaluation and a discussion of the
+factors that affect parallel SAT solver performance.
 
 \subsection{Methodology}
 Our benchmark problems are taken from SAT-Race 2008~\cite{SATRace2008}. We
@@ -406,14 +404,19 @@ also ensuring that we avoid problems that finished in a few seconds.
 
 Fourteen among the chosen 25 problems are satisfiable while the remaining
 eleven are unsatisfiable. The comparison with ManySAT uses ManySAT version 2.0
-obtained from~\cite{ManySATWeb}.  The default command-line and default
-parameter settings were used when executing ManySAT.
-
+obtained from~\cite{ManySATWeb}.\footnote{ManySAT was the winner in the
+parallel category of SAT-Race 2008 and won the silver medal in the same
+category in SAT-Race 2010.} The default command-line and default parameter
+settings were used when executing ManySAT.
 
 Experiments were performed on an 8-core Intel\textregistered
 ~Xeon\textregistered ~E31230 CPU clocked at 3.20GHz with 32 GB of RAM (machine
 1) and a 24-core Intel\textregistered~Xeon ~E5645 CPU clocked at 2.40 GHz with
 128GB of RAM (machine 2). 
+
+Our SAT solver was implemented using C++ and builds on top of MiniSAT
+2.2~\cite{MiniSATWeb}. We used MPICH~2~\cite{MPICH2} as the underlying
+message-passing framework.
 
 \subsection{Speedup}
 \label{sec:speedup}
@@ -472,7 +475,7 @@ We note that super-linear speedups are possible and observed in a number of
 benchmarks.  Since SAT-solving is essentially a heuristic search, combining
 information from multiple processes can help the solver ``close out'' large
 regions of the search space much faster than would have been possible with a
-sequential search. It is not necessary that the sizes of ``closed out'' regions
+sequential search. It is not necessary that the size of ``closed out'' region
 is linearly proportional to the number of cores. We also note that co-operation
 can be detrimental because of the interaction between the shared clauses and
 the decision heuristic.  This can result in the solver ``wasting time'' by
@@ -488,7 +491,7 @@ exploring parts of the search space that do not contain the solution.
 
 Figure \ref{fig:speedup} presents the \emph{overall execution speedup} for the
 problems shown in Table \ref{tab:speedup}. The overall speedup measured here is
-speedup compared to MiniSat 2.2 baseline for the time taken to solve all 25
+speedup compared to the MiniSAT 2.2 baseline for the time taken to solve all 25
 problems by the two parallel solvers. It can be seen that the MPI-based
 parallel solver gets only slightly faster when going from 1 to 2 cores. Going
 from 2 to 4 cores produces significant gains but speedup is already tapering
@@ -549,7 +552,7 @@ shown in Table \ref{tab:speedup} left us with the 20 benchmarks shown in Table
 We see from Table \ref{tab:scalability} that some performance improvements are
 seen up to 16 cores but there is a slowdown when running the program with 20
 and 24 cores. This suggests that beyond 16 cores, the overhead of communication
-and the divide-and-conquer approach outweighs the benefits of clause sharing.
+due to the divide-and-conquer approach outweighs the benefits of clause sharing.
 
 \subsection{Effect of Clause Sharing}
 \label{sec:sharing effects}
@@ -577,8 +580,10 @@ observations that can be made are the following:
 MSCS=16. This number corresponds to the results shown in the previous
 subsection.
 
-\item When executing with either cores, sharing less (MSCS=8) seems to be the
-best although there is an abberant data point for MSCS=32.
+\item When executing with eight cores it appears MSCS=8, 16 and 32 provide
+similar performance. One explanation for this could be that MSCS=8 does well
+because it has a smaller communication overhead while MSCS=32 does well because
+it results in more co-operation between the threads.
      
 \end{enumerate}
 
@@ -616,7 +621,7 @@ to a learned class obtained from another process as an ``imported''
 clause.\footnote{The term ``imported'' clause is borrowed from the ManySAT
 codebase.} An imported clause that subsequently causes a conflict is called a
 ``useful'' clause. Clearly, imported clauses that never get involved in a
-conflict are undesirable because they simply contribute to the communication
+conflict are useless because they simply contribute to the communication
 overhead without aiding any of the computation.
 
 Figure \ref{fig:useful} shows the percentage of clauses and the distribution of
@@ -715,7 +720,7 @@ than it helps because of the loss of co-operation among processes.
 
 Although our implementation outperforms ManySAT2.0, it is clear that there is
 a scalability bottleneck beyond 12 cores for the solver.  Some challenges
-that need to be solved in further scaling performance are described below.
+that need to be solved to enable further scaling further are described below.
 
 The decision heuristic introduced in Section \ref{sec:decheu} works to a
 limited extent but when scaled to a large number of processes, it results in
@@ -744,11 +749,11 @@ Finally, we hypothesize that a parallel solver needs a periodic ``resync''
 operation. The intuition here is that after an extended period of execution,
 the processes may ``wander away'' from each other and then the sharing of
 learned clauses has little or no benefit. To prevent this, every so often
-(measured in time period of several seconds) the processes can all be forced
+(measured in a time period of several seconds) the processes can all be forced
 ``resync'' to the same state and resume execution. The state here consists of
 the values of the activity factors and the database of learned clauses.
-Resuming execution from this common state will probably result in sharing
-to become benefical again. The resync may be the parallel analog of the restart
+Resuming execution from this common state will probably result in sharing to
+become benefical again. The resync may be the parallel analog of the restart
 operation that is an essential part of the sequential SAT solver.
 
 \section{Conclusion}
