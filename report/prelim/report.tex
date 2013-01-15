@@ -117,7 +117,8 @@ back-tracking. DPLL uses the following heuristics before each recursive call:
 
 \begin{itemize}
 \item \textbf{Unit Propagation}: if a clause contains only one literal, the clause 
-can be only satisfied by giving such a value to the literal that makes it true. 
+can only be satisfied by giving such a value to the literal that makes it true. This
+action is repeated until there is no such clauses.
 
 \item \textbf{Pure Literal Elimination}: if a variable occurs with only one
 polarity in the whole formula, then it can be assigned with a value that
