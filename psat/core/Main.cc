@@ -233,9 +233,9 @@ int main(int argc, char** argv)
 #endif
         MPI_Finalize();
 #ifdef NDEBUG
-        exit(ret == l_True ? 10 : ret == l_False ? 20 : 0);     // (faster than "return", which will invoke the destructor for 'Solver')
+        exit(0);     // (faster than "return", which will invoke the destructor for 'Solver')
 #else
-        return (ret == l_True ? 10 : ret == l_False ? 20 : 0);
+        return (0);
 #endif
     } catch (OutOfMemoryException&){
         printf("===============================================================================\n");

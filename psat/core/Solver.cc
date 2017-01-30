@@ -1284,41 +1284,35 @@ bool Solver::importClause(int sz, vec<Lit>& clause, int& source)
 {
     int pending=0;
     MPI_Status status;
-    for(int i = 0; i != numTasks; i++) {
-        if(i == taskId) continue;
-        MPI_Iprobe(MPI_ANY_SOURCE, MPI_CLAUSE_TAG(sz), MPI_COMM_WORLD, &pending, &status);
-        if(pending) {
+    MPI_Iprobe(MPI_ANY_SOURCE, MPI_CLAUSE_TAG(sz), MPI_COMM_WORLD, &pending, &status);
+    if(pending) {
+        int bytes = sizeof(Lit) * sz;
+        MPI_Recv(clause.dataPtr(), bytes, MPI_BYTE, MPI_ANY_SOURCE, MPI_CLAUSE_TAG(sz), MPI_COMM_WORLD, &status);
+        source = status.MPI_SOURCE;
 #ifdef COLLECT_PERF_STATS
-            szStats[sz].imported += 1;
-#endif
-            clause.growTo(sz);
-            int bytes = sizeof(Lit) * sz;
-            MPI_Recv(clause.dataPtr(), bytes, MPI_BYTE, MPI_ANY_SOURCE, MPI_CLAUSE_TAG(sz), MPI_COMM_WORLD, &status);
-            source = status.MPI_SOURCE;
-
-#ifdef COLLECT_PERF_STATS
+        szStats[sz].imported += 1;
 #ifdef TRACK_IMPORTED
-            coreStats[source].imported += 1;
+        coreStats[source].imported += 1;
 #endif
 #endif
-            if(numClusters != 1 && !sameCluster(status.MPI_SOURCE)) {
-                // broadcast this to other parts of the same cluster.
-                for(int i = clusterStart; i != clusterEnd; i++) {
-                    if(i == taskId) continue;
-                    MPI_Send(clause.dataPtr(), bytes, MPI_BYTE, i, MPI_CLAUSE_TAG(sz), MPI_COMM_WORLD);
-                }
+        if(numClusters != 1 && !sameCluster(status.MPI_SOURCE)) {
+            // broadcast this to other parts of the same cluster.
+            for(int i = clusterStart; i != clusterEnd; i++) {
+                if(i == taskId) continue;
+                MPI_Send(clause.dataPtr(), bytes, MPI_BYTE, i, MPI_CLAUSE_TAG(sz), MPI_COMM_WORLD);
             }
-
-            return true;
         }
+
+        return true;
     }
-    return false;
+    return 0;
 }
 
 void Solver::importAllClauses()
 {
     vec<Lit> clause;
-    for(int sz = 1; sz <= opt_max_share_size; sz++) {
+    for (int sz=1; sz != opt_max_share_size; sz++) {
+        clause.growTo(sz);
         bool more = false;
         do {
             int source;
